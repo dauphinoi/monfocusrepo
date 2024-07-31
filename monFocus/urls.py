@@ -19,7 +19,7 @@ urlpatterns = [
     path("accounts/", include("accounts.urls", namespace="accounts")),
     path('monespace/', include('monEspace.urls', namespace='monEspace')),
     path("api/", include(router.urls)),
-    path("", espacenote_view, name="espacenote"),  # La vue espacenote est maintenant la page d'accueil
+    path("", include("monFocusprof.urls")),
     path('api/chat/', ChatViewSet.as_view({'post': 'chat'}), name='chat'),
 
 ]
