@@ -1,0 +1,782 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Note</title>
+    <link rel="stylesheet" href="{% static 'monEspace/css/espacenote.css' %}">
+    <script src="https://cdn.tiny.cloud/1/55zy79f32gfvo4fzh0z8g4gauftodcamyy2j5gau0di3vj72/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+    let allNotes = [];
+    let courseNotes = [];
+    let recentNotes = [];
+    let selectedNote = null;
+    let currentCourseId = null;
+    let chatMessages = [];
+
+    // Initialisation
+    initTinyMCE();
+    fetchAllNotes();
+    setupEventListeners();
+
+    function initTinyMCE() {
+        tinymce.init({
+            selector: '#editor',
+            height: 500,
+            plugins: [
+                'advlist autolink lists link image charmap print preview anchor',
+                'searchreplace visualblocks code fullscreen',
+                'insertdatetime media table paste code help wordcount',
+                'mathjax'
+            ],
+            toolbar: `
+                undo redo | formatselect | bold italic backcolor |
+                alignleft aligncenter alignright alignjustify |
+                bullist numlist outdent indent | removeformat | help |
+                mathjax
+            `,
+            mathjax: {
+                lib: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_HTML',
+                symbols: {start: '\\(', end: '\\)'},
+                className: 'math-tex'
+            },
+            setup: function(editor) {
+                editor.on('change', function() {
+                    if (selectedNote) {
+                        selectedNote.content = editor.getContent();
+                    }
+                });
+            },
+            extended_valid_elements: 'span[*]',
+        });
+    }
+
+    function setupEventListeners() {
+        document.getElementById('newNoteBtn').addEventListener('click', createNewNote);
+        document.getElementById('searchBtn').addEventListener('click', toggleSearch);
+        document.getElementById('chatBtn').addEventListener('click', toggleChat);
+        document.getElementById('todoBtn').addEventListener('click', toggleTodo);
+        document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
+        document.getElementById('addImageBtn').addEventListener('click', () => triggerFileInput('image'));
+        document.getElementById('addVideoBtn').addEventListener('click', () => triggerFileInput('video'));
+        document.getElementById('addAudioBtn').addEventListener('click', () => triggerFileInput('audio'));
+        document.getElementById('closeChatBtn').addEventListener('click', toggleChat);
+        document.getElementById('sendChatBtn').addEventListener('click', handleChatSubmit);
+        document.getElementById('closeMediaBtn').addEventListener('click', closeMediaOverlay);
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleChatSubmit();
+            }
+        });
+
+        document.querySelectorAll('.course-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const courseId = item.dataset.courseId;
+        if (courseId && courseId !== 'null') {
+            const courseName = item.querySelector('h3').textContent;
+            fetchCourseNotes(courseId, courseName);
+        } else {
+            console.error('Invalid course ID');
+        }
+    });
+});
+    }
+
+    async function fetchAllNotes() {
+        try {
+            const response = await fetch('/api/notes/');
+            allNotes = await response.json();
+        } catch (error) {
+            console.error('Error fetching all notes:', error);
+        }
+    }
+
+    async function fetchCourseNotes(courseId, courseName) {
+        try {
+            currentCourseId = courseId;
+            const response = await fetch(`/api/notes/course_notes/?course_id=${courseId}`);
+            courseNotes = await response.json();
+            updateRecentNotes();
+            renderNotes();
+            updateCurrentCourseTitle(courseName);
+            toggleView('notes');
+        } catch (error) {
+            console.error('Error fetching course notes:', error);
+        }
+    }
+
+    function updateRecentNotes() {
+        recentNotes = courseNotes
+            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+            .slice(0, 5);
+        renderRecentNotes();
+    }
+
+    function renderNotes() {
+        const allNotesList = document.getElementById('allNotesList');
+        allNotesList.innerHTML = '';
+        courseNotes.forEach(note => {
+            const noteElement = createNoteElement(note);
+            allNotesList.appendChild(noteElement);
+        });
+    }
+
+    function renderRecentNotes() {
+        const recentNotesList = document.getElementById('recentNotesList');
+        recentNotesList.innerHTML = '';
+        recentNotes.forEach(note => {
+            const noteElement = createNoteElement(note);
+            recentNotesList.appendChild(noteElement);
+        });
+    }
+
+    function createNoteElement(note) {
+        const div = document.createElement('div');
+        div.className = `note-item ${selectedNote && selectedNote.id === note.id ? 'selected' : ''}`;
+        div.innerHTML = `<span class="icon">📄</span> ${note.title}`;
+        div.addEventListener('click', () => selectNote(note));
+        return div;
+    }
+
+    function selectNote(note) {
+        selectedNote = note;
+        document.getElementById('noteTitle').textContent = note.title;
+        tinymce.get('editor').setContent(note.content || '');
+        renderAttachments(note.attachments);
+        updateRecentNotes();
+        toggleView('editor');
+    }
+
+    function renderAttachments(attachments) {
+        const attachmentsContainer = document.getElementById('attachments');
+        attachmentsContainer.innerHTML = '';
+        if (attachments && attachments.length > 0) {
+            attachments.forEach(attachment => {
+                const button = document.createElement('button');
+                button.innerHTML = `
+                    <span class="icon">
+                        ${attachment.file_type === 'image' ? '🖼️' : 
+                        attachment.file_type === 'video' ? '🎥' : 
+                        attachment.file_type === 'audio' ? '🎵' : 
+                        '📎'}
+                    </span>
+                    ${attachment.file.split('/').pop()}
+                `;
+                button.addEventListener('click', () => handleAttachmentClick(attachment));
+                attachmentsContainer.appendChild(button);
+            });
+        }
+    }
+
+    function createNewNote() {
+        if (!currentCourseId) {
+            alert("Veuillez d'abord sélectionner un cours.");
+            return;
+        }
+        const title = prompt("Entrez le titre de votre nouvelle note :");
+        if (title) {
+            const newNote = { title: title, content: '', attachments: [], course: currentCourseId };
+            courseNotes.push(newNote);
+            selectNote(newNote);
+            updateRecentNotes();
+            toggleView('editor');
+        }
+    }
+
+    async function saveNote() {
+        if (selectedNote) {
+            try {
+                const url = selectedNote.id ? `/api/notes/${selectedNote.id}/` : '/api/notes/';
+                const method = selectedNote.id ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        ...selectedNote,
+                        course: currentCourseId
+                    }),
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const savedNote = await response.json();
+                if (selectedNote.id) {
+                    courseNotes = courseNotes.map(n => n.id === savedNote.id ? savedNote : n);
+                    allNotes = allNotes.map(n => n.id === savedNote.id ? savedNote : n);
+                } else {
+                    courseNotes.push(savedNote);
+                    allNotes.push(savedNote);
+                }
+                selectedNote = savedNote;
+                updateRecentNotes();
+                renderNotes();
+                alert('Note sauvegardée avec succès');
+            } catch (error) {
+                console.error('Error saving note:', error);
+                alert('Erreur lors de la sauvegarde de la note');
+            }
+        }
+    }
+
+    function toggleView(view) {
+        const courseGrid = document.getElementById('courseGrid');
+        const noteContent = document.getElementById('noteContent');
+        const allNotesList = document.getElementById('allNotesList');
+        
+        switch(view) {
+            case 'courses':
+                courseGrid.style.display = 'grid';
+                noteContent.style.display = 'none';
+                allNotesList.style.display = 'none';
+                break;
+            case 'notes':
+                courseGrid.style.display = 'none';
+                noteContent.style.display = 'none';
+                allNotesList.style.display = 'block';
+                break;
+            case 'editor':
+                courseGrid.style.display = 'none';
+                noteContent.style.display = 'block';
+                allNotesList.style.display = 'none';
+                break;
+        }
+    }
+
+    function toggleSearch() {
+        const searchOverlay = document.getElementById('searchOverlay');
+        searchOverlay.style.display = searchOverlay.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    function toggleChat() {
+        const chatOverlay = document.querySelector('.chat-overlay');
+        chatOverlay.style.display = chatOverlay.style.display === 'none' ? 'flex' : 'none';
+        if (chatOverlay.style.display === 'flex') {
+            renderChatMessages();
+        }
+    }    
+
+    function toggleTodo() {
+        const todoSidebar = document.getElementById('todoSidebar');
+        todoSidebar.style.display = todoSidebar.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function handleChatSubmit() {
+        const chatInput = document.getElementById('chatInput');
+        const messageContent = chatInput.value.trim();
+        if (messageContent === '') return;
+    
+        const userMessage = { role: 'user', content: messageContent };
+        chatMessages.push(userMessage);
+        renderChatMessages();
+        
+        chatInput.value = '';
+        
+        try {
+            const response = await fetch('/api/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({ message: messageContent }),
+            });
+            const data = await response.json();
+            const aiMessage = { role: 'ai', content: data.message, source: data.source };
+            chatMessages.push(aiMessage);
+            renderChatMessages();
+        } catch (error) {
+            console.error('Error submitting chat:', error);
+        }
+    }
+
+    function renderChatMessages() {
+        const chatMessagesContainer = document.getElementById('chatMessages');
+        chatMessagesContainer.innerHTML = '';
+        chatMessages.forEach((message) => {
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-message ${message.role}`;
+            messageElement.innerHTML = `
+                <div class="message-content">
+                    <p>${message.content}</p>
+                    ${message.source ? `<p class="source"><a href="#" onclick="selectNoteById(${message.source})">Source</a></p>` : ''}
+                </div>
+            `;
+            chatMessagesContainer.appendChild(messageElement);
+        });
+        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    }
+    
+    function selectNoteById(noteId) {
+        const note = allNotes.find(n => n.id === noteId);
+        if (note) {
+            fetchCourseNotes(note.course, '');  // Fetch the course notes first
+            selectNote(note);
+        }
+    }
+
+    function triggerFileInput(type) {
+        const fileInput = document.getElementById('fileInput');
+        fileInput.setAttribute('accept', type === 'image' ? 'image/*' : type === 'video' ? 'video/*' : 'audio/*');
+        fileInput.click();
+    }
+
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', file.type.split('/')[0]);
+        formData.append('note_id', selectedNote.id);
+
+        try {
+            const response = await fetch('/api/upload/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: formData,
+            });
+            const data = await response.json();
+            const newAttachment = { type: file.type.split('/')[0], url: data.url, name: file.name };
+            selectedNote.attachments = [...(selectedNote.attachments || []), newAttachment];
+            renderAttachments(selectedNote.attachments);
+        } catch (error) {
+            console.error('Error uploading file:', error);
+        }
+    }
+
+    function handleAttachmentClick(attachment) {
+        const mediaOverlay = document.getElementById('mediaOverlay');
+        const mediaContent = document.getElementById('mediaContent');
+        mediaContent.innerHTML = '';
+    
+        switch (attachment.file_type) {
+            case 'image':
+                mediaContent.innerHTML = `<img src="${attachment.file}" alt="Image">`;
+                break;
+            case 'video':
+                mediaContent.innerHTML = `<video controls src="${attachment.file}"></video>`;
+                break;
+            case 'audio':
+                mediaContent.innerHTML = `<audio controls src="${attachment.file}"></audio>`;
+                break;
+            default:
+                mediaContent.innerHTML = `<p>Fichier non pris en charge : ${attachment.file}</p>`;
+        }
+    
+        mediaOverlay.style.display = 'flex';
+    }
+
+    function closeMediaOverlay() {
+        document.getElementById('mediaOverlay').style.display = 'none';
+    }
+
+    async function handleSearch() {
+        const query = document.getElementById('searchInput').value;
+        if (query.length < 4) {
+            document.getElementById('searchResults').innerHTML = '';
+            return;
+        }
+        try {
+            const response = await fetch(`/api/notes/search/?q=${encodeURIComponent(query)}`);
+            const results = await response.json();
+            renderSearchResults(results);
+        } catch (error) {
+            console.error('Error searching:', error);
+        }
+    }
+
+    function renderSearchResults(results) {
+        const searchResultsContainer = document.getElementById('searchResults');
+        searchResultsContainer.innerHTML = '';
+        results.forEach(result => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <h4>${result.title}</h4>
+                <p>${result.content_preview}</p>
+            `;
+            li.addEventListener('click', () => {
+                selectNoteById(result.id);
+                toggleSearch();
+            });
+            searchResultsContainer.appendChild(li);
+        });
+    }
+
+    function updateCurrentCourseTitle(courseName) {
+        document.getElementById('currentCourseTitle').textContent = courseName;
+    }
+
+    function getCsrfToken() {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            .split('=')[1];
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Gestion des clics en dehors des overlays
+    document.addEventListener('mousedown', function(event) {
+        const searchOverlay = document.getElementById('searchOverlay');
+        const chatOverlay = document.querySelector('.chat-overlay');
+        const todoSidebar = document.getElementById('todoSidebar');
+
+        if (!searchOverlay.contains(event.target) && event.target !== document.getElementById('searchBtn')) {
+            searchOverlay.style.display = 'none';
+        }
+        if (!chatOverlay.contains(event.target) && event.target !== document.getElementById('chatBtn')) {
+            chatOverlay.style.display = 'none';
+        }
+        if (!todoSidebar.contains(event.target) && event.target !== document.getElementById('todoBtn')) {
+            todoSidebar.style.display = 'none';
+        }
+    });
+
+    // Gestion de l'ajout de cours
+    const addCourseBtn = document.getElementById('addCourseBtn');
+    const addCourseOverlay = document.getElementById('addCourseOverlay');
+    const closeOverlayBtn = document.getElementById('closeOverlayBtn');
+    const addCourseForm = document.getElementById('addCourseForm');
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+
+    // Liste complète des matières
+    const toutesLesMatières = [
+        {id: 1, name: 'Mathématiques'},
+        {id: 2, name: 'Français'},
+        {id: 3, name: 'Anglais'},
+        {id: 4, name: 'Physique'},
+        {id: 5, name: 'Chimie'},
+        {id: 6, name: 'Aide aux devoirs'},
+        {id: 7, name: 'Allemand'},
+        {id: 8, name: 'Comptabilité'},
+        {id: 9, name: 'Droit'},
+        {id: 10, name: 'Économie'},
+        {id: 11, name: 'Histoire'},
+        {id: 12, name: 'Coaching'},
+        {id: 13, name: 'Orientation'},
+        {id: 14, name: 'Espagnol'},
+        {id: 15, name: 'SVT/Biologie'},
+        {id: 16, name: 'Cours de musique'}
+    ];
+
+    const typesCours = [
+        {name: 'Cours à domicile'},
+        {name: 'Cours hebdomadaire en centre (près de chez vous)'},
+        {name: 'Stage de vacances'},
+        {name: 'Cours en ligne (avec un prof en visio)'},
+        {name: 'Je ne sais pas et souhaite être conseillé(e)'}
+    ];
+
+    function createOptions(container, options, type, isMatiere = false) {
+        container.innerHTML = '';
+        options.forEach(option => {
+            const label = document.createElement('label');
+            label.className = 'option-button';
+            if (isMatiere) {
+                label.innerHTML = `
+                    <input type="radio" name="subject_id" value="${option.id}">
+                    ${getSubjectIcon(option.name)}
+                    <span>${option.name}</span>
+                `;
+            } else {
+                label.innerHTML = `
+                    <input type="checkbox" name="course_types" value="${option.name}"> 
+                    <span>${option.name}</span>  
+                `;
+            }
+            container.appendChild(label);
+        });
+    }
+    
+    function getSubjectIcon(subjectName) {
+        const icons = {
+            'Mathématiques': '🧮',
+            'Français': '📚',
+            'Anglais': '🇬🇧',
+            'Physique': '⚛️',
+            'Chimie': '🧪',
+            'Aide aux devoirs': '📝',
+            'Allemand': '🇩🇪',
+            'Comptabilité': '💼',
+            'Droit': '⚖️',
+            'Économie': '📊',
+            'Histoire': '🏛️',
+            'Coaching': '🏆',
+            'Orientation': '🧭',
+            'Espagnol': '🇪🇸',
+            'SVT/Biologie': '🧬',
+            'Cours de musique': '🎵'
+        };
+        return `<div class="subject-icon">${icons[subjectName] || '📚'}</div>`;
+    }
+
+    function filtrerMatieres(coursInscrits) {
+        return toutesLesMatières.filter(matiere => 
+            !coursInscrits.some(cours => cours.subject.name === matiere.name)
+        );
+    }
+
+    addCourseBtn.addEventListener('click', () => {
+        const matieresDisponibles = filtrerMatieres(window.courses || []);
+        createOptions(document.getElementById('matiereOptions'), matieresDisponibles, 'radio', true);
+        createOptions(document.getElementById('typeCoursOptions'), typesCours, 'checkbox');
+        addCourseOverlay.style.display = 'flex';
+    });
+
+    closeOverlayBtn.addEventListener('click', () => {
+        addCourseOverlay.style.display = 'none';
+        step1.style.display = 'block';
+        step2.style.display = 'none';
+    });
+
+    step1.querySelector('.next-button').addEventListener('click', () => {
+        step1.style.display = 'none';
+        step2.style.display = 'block';
+    });
+
+    step2.querySelector('.prev-button').addEventListener('click', () => {
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+    });
+
+    addCourseForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch('add-course/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Cours ajouté avec succès');
+                window.location.reload();
+            } else {
+                console.error('Erreur lors de l\'ajout du cours:', data.message);
+                alert('Erreur lors de l\'ajout du cours: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la requête:', error);
+            alert('Une erreur est survenue lors de l\'ajout du cours');
+        })
+        .finally(() => {
+            addCourseOverlay.style.display = 'none';
+            this.reset();
+            step1.style.display = 'block';
+            step2.style.display = 'none';
+        });
+    });
+
+    // Initialisation
+    toggleView('courses');
+});
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_HTML"></script>
+    <style>
+        .courses-container {
+    overflow-y: auto;
+    max-height: calc(100vh - 60px); /* Ajustez 60px selon la hauteur de votre top-bar */
+    padding: 20px;
+}
+
+.course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    
+}
+
+.course-item {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.2s;
+    min-height: 180px;
+}
+
+.course-item:hover {
+    transform: scale(1.05);
+}
+
+.course-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.course-item h3 {
+    margin: 10px 0 5px;
+    font-size: 16px;
+}
+
+.course-item p {
+    margin: 0;
+    font-size: 12px;
+}
+
+.add-course-button {
+    border: 2px dashed #ccc;
+    background-color: #f8f8f8;
+    cursor: pointer;
+}
+
+.add-course-button:hover {
+    background-color: #e8e8e8;
+}
+
+@media (max-width: 768px) {
+    .course-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .course-item {
+        padding: 10px;
+        min-height: 150px;
+    }
+    
+    .course-icon {
+        font-size: 32px;
+    }
+    
+    .course-item h3 {
+        font-size: 14px;
+    }
+    
+    .course-item p {
+        font-size: 10px;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <div class="sidebar-top">
+                <button class="new-button" id="newNoteBtn">
+                    <span class="icon">+</span> New
+                </button>
+                <button id="searchBtn"><span class="icon">🔍</span></button>
+                <button id="chatBtn">
+                    <img src="{% static 'monEspace/images/roboticone.webp' %}" alt="AI Chat" class="icon-button">
+                </button>
+            </div>
+            <div class="recent-notes">
+                <h3>Recent Notes</h3>
+                <div id="recentNotesList"></div>
+            </div>
+            <div class="note-list">
+                <h3>All Notes</h3>
+                <div id="allNotesList"></div>
+            </div>
+            <div class="settings">
+                <span class="icon">⚙️</span> Settings
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="top-bar">
+                <h1 id="currentCourseTitle">Sélectionnez un cours</h1>
+                <h1 id="noteTitle">No Note Selected</h1>
+                <div class="top-bar-icons">
+                    <button id="todoBtn"><span class="icon">📋</span></button>
+                </div>
+            </div>
+            <div class="courses-container">
+                <div id="courseGrid" class="course-grid">
+                    {% for course in courses %}
+                    {% block course_item %}
+                        <div class="course-item" data-course-id="{{ course.id }}" style="background-color: {% cycle '#e0f7fa' '#ffcccb' '#fff59d' '#f8bbd0' '#c8e6c9' '#b2ebf2' '#d7ccc8' '#dcedc8' as bgcolors %}">
+                            <div class="course-icon">
+                                {{ course.subject.name|get_subject_icon|safe }}
+                            </div>
+                            <h3>{{ course.subject.name }}</h3>
+                            <p>{{ course.level.name }} - {{ course.cours_type.name }}</p>
+                            <p>Élève: {{ course.visitor.first_name }} {{ course.visitor.last_name }}</p>
+                        </div>
+                    {% endblock %}
+                    {% endfor %}
+                    {% block add_course_overlay %}
+                    {% endblock %}
+                </div>
+            </div>
+            <div id="noteContent" style="display: none;">
+                <div id="attachments"></div>
+                <div class="toolbar">
+                    <button id="saveNoteBtn"><span class="icon">💾</span> Save</button>
+                    <button id="addImageBtn"><span class="icon">🖼️</span> Add Image</button>
+                    <button id="addVideoBtn"><span class="icon">🎥</span> Add Video</button>
+                    <button id="addAudioBtn"><span class="icon">🎵</span> Add Audio</button>
+                </div>
+                <div id="editor"></div>
+            </div>
+        </div>
+    </div>  
+    
+    <div id="searchOverlay" class="search-overlay" style="display: none;">
+        <div class="search-component">
+            <input type="text" id="searchInput" placeholder="Rechercher des notes...">
+            <ul id="searchResults" class="search-results"></ul>
+        </div>
+    </div>
+
+    <div class="chat-overlay" style="display: none;">
+        <div class="chat-header">
+            <h2>AI</h2>
+            <button id="closeChatBtn" class="close-button">×</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Les messages du chatbot seront insérés ici -->
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Ask anything about your notes">
+            <button id="sendChatBtn">Send</button>
+        </div>
+    </div>    
+
+    <div id="todoSidebar" class="todo-sidebar" style="display: none;">
+        <h2>To-Do List</h2>
+        <ul id="todoList"></ul>
+    </div>
+
+    <div id="mediaOverlay" class="media-overlay" style="display: none;">
+        <div class="media-content">
+            <div id="mediaContent"></div>
+            <button id="closeMediaBtn" class="close-button">Fermer</button>
+        </div>
+    </div>
+
+    {% block add_course_overlay %}
+       
+    {% endblock %}
+
+</body>
+</html>

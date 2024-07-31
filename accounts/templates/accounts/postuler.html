@@ -1,0 +1,264 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postuler - monFocusprof</title>
+    <link rel="stylesheet" href="{% static 'accounts/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/footer.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/confirmation.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        .content-wrapper {
+            flex: 1 0 auto;
+        }
+        .footer {
+            flex-shrink: 0;
+            background-color: #001b44;
+            color: white;
+        }
+        .footer-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .footer-logo, .footer-section {
+            margin-bottom: 20px;
+        }
+        .footer-logo {
+            display: flex;
+            align-items: center;
+        }
+        .footer-logo img {
+            height: 30px;
+            margin-right: 10px;
+        }
+        .footer-section h3 {
+            margin-bottom: 10px;
+        }
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        .footer-section ul li {
+            margin-bottom: 5px;
+        }
+        .footer-section ul li a {
+            color: white;
+            text-decoration: none;
+        }
+        .social-links {
+            display: flex;
+            gap: 10px;
+        }
+        .footer-bottom {
+            text-align: center;
+            padding: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        @media (max-width: 768px) {
+            .footer-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .footer-section {
+                width: 100%;
+                text-align: center;
+            }
+            .social-links {
+                justify-content: center;
+            }
+        }
+        /* Styles existants... */
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .option-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-button:hover {
+            background-color: #e0e0e0;
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .option-button input {
+            display: none;
+        }
+
+        .option-button input:checked + .subject-icon + span,
+        .option-button input:checked + span {
+            font-weight: bold;
+            color: #001b44;
+        }
+
+        .option-button input:checked + .subject-icon,
+        .option-button input:checked + span + .subject-icon {
+            transform: scale(1.2);
+        }
+
+        .subject-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .option-button span {
+            text-align: center;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content-wrapper">
+        <div class="container">
+            <a href="{% url 'index' %}" class="btn-home">
+                <i class="fas fa-home"></i> Revenir à la page d'accueil
+            </a>
+            <h1>Postuler en 2 minutes</h1>
+            <div class="stepper">
+                <div class="stepper-step {% if step <= 3 %}active{% elif step > 3 %}completed{% endif %}">
+                    Enseignement
+                    <div class="sub-step">
+                        {% if step == 1 %}Qui êtes-vous ?{% endif %}
+                        {% if step == 2 %}Disciplines{% endif %}
+                        {% if step == 3 %}Niveaux{% endif %}
+                    </div>
+                </div>
+                <div class="stepper-step {% if step == 4 %}active{% elif step > 4 %}completed{% endif %}">
+                    Profil
+                    <div class="sub-step">
+                        {% if step == 4 %}Votre formation{% endif %}
+                    </div>
+                </div>
+                <div class="stepper-step {% if step == 5 %}active{% endif %}">
+                    Contact
+                    <div class="sub-step">
+                        {% if step == 5 %}Vos informations{% endif %}
+                    </div>
+                </div>
+            </div>
+            <form method="post" enctype="multipart/form-data" id="postulationForm">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="form-group">
+                        <div class="question">{{ field.label }}</div>
+                        {% if field.name == 'disciplines' %}
+                            <div id="disciplinesContainer" class="options-grid"></div>
+                        {% else %}
+                            {% if field.field.widget.input_type == 'checkbox' or field.field.widget.input_type == 'radio' %}
+                                <div class="options-grid">
+                                    {% for choice in field %}
+                                        <label class="option-button">
+                                            {{ choice.tag }}
+                                            <span>{{ choice.choice_label }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="form-field">
+                                    {{ field }}
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <input type="hidden" name="step" value="{{ step }}">
+                <div class="form-navigation">
+                    {% if step > 1 %}
+                        <button type="button" onclick="window.location.href='{% url 'accounts:postuler_with_step' step=step|add:'-1' %}'">Précédent</button>
+                    {% endif %}
+                    <button type="submit" id="submitButton">
+                        {% if step < 5 %}
+                            Suivant
+                        {% else %}
+                            Je postule
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Modal de succès -->
+        <div id="success-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div class="success-icon">✓</div>
+                <h2>Inscription réussie !</h2>
+                <p>Votre profil a été créé avec succès.</p>
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="location.href='{% url 'index' %}'">Retour à l'accueil</button>
+                    <button class="btn btn-primary" onclick="location.href='{% url 'accounts:login_view' %}'">Mon espace enseignant</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-logo">
+                <img src="{% static 'monFocusprof/images/lllo.svg' %}" alt="Logo">
+                <span>monFocus</span>
+            </div>
+            <div class="footer-section">
+                <h3>Entreprise</h3>
+                <ul>
+                    <li><a href="#">À propos</a></li>
+                    <li><a href="#">Recherche</a></li>
+                    <li><a href="#">Carrières</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Nos offres</h3>
+                <ul>
+                    <li><a href="#">Nos enseignants</a></li>
+                    <li><a href="#">Lunettes monFocus</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Social Links</h3>
+                <ul class="social-links">
+                    <li><a href="#"><i class="fab fa-x-twitter"></i></a></li>
+                    <li><a href="#"><i class="fab fa-linkedin"></i></a></li>
+                    <li><a href="#"><i class="fab fa-youtube"></i></a></li>
+                    <li><a href="#"><i class="fab fa-github"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>monFocus Inc ©2024</p>
+            <a href="#top">Aller en haut <i class="fas fa-arrow-up"></i></a>
+        </div>
+    </footer>
+    <script src="{% static 'accounts/js/postuler.js' %}"></script>
+
+</body>
+</html>

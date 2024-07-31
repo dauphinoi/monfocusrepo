@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - monFocusprof</title>
+    <link rel="stylesheet" href="{% static 'accounts/css/login_style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .custom-error {
+            font-size: 1.2em;
+            color: #ff0000;
+            font-weight: bold;
+            padding: 10px;
+            border: 2px solid #ff0000;
+            background-color: #ffeeee;
+            margin-bottom: 20px;
+        }
+        .login-image {
+            position: relative;
+        }
+        .login-image .logo {
+            position: absolute;
+            height: 58px;
+            top: 1px;
+            left: 1px;
+            z-index: 10;
+        }
+        .welcome-text {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-image">
+            <img src="{% static 'monFocusprof/images/lllo.svg' %}" alt="Bienvenue" class="logo">
+            <div class="welcome-text">
+                <h1>BIENVENUE</h1>
+                <p>Afin d'accéder à l'espace personnel, merci de saisir les codes de connexion.</p>
+            </div>
+        </div>
+        <div class="login-form">
+            <h2>Connexion</h2>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %} custom-error" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            <form action="#" method="post">
+                {% csrf_token %}
+                {{ form.username.label_tag }}
+                {{ form.username }}
+                <p>
+                    Identifiant parent : votre adresse email<br>
+                    Identifiant élève : ton adresse email (si elle a été enregistrée) ou l'identifiant configuré<br>
+                    Identifiant enseignant : prénom.nom
+                </p>
+                {{ form.password.label_tag }}
+                {{ form.password }}
+                <div class="form-group">
+                    {{ form.remember_me }}
+                    {{ form.remember_me.label_tag }}
+                </div>
+                <button type="submit" class="btn-connect">Connexion</button>
+                <div class="additional-links">
+                    <a href="#">Mot de passe oublié ou première connexion ?</a><br>
+                    <a href="#">Je ne trouve pas mon identifiant</a><br>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

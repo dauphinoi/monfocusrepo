@@ -1,0 +1,370 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Note</title>
+    <link rel="stylesheet" href="{% static 'monEspace/css/espacenote.css' %}">
+    <script src="https://cdn.tiny.cloud/1/55zy79f32gfvo4fzh0z8g4gauftodcamyy2j5gau0di3vj72/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        const userFirstName = "{{ first_name|default:'Étudiant' }}";
+        const tinymceApiKey = "tt0v5khcsqrekvlsszd48e3dxdlfz1jxwrf4xbbq9iabp6ht";
+    </script>
+    
+    <script src="{% static 'monEspace/js/espacenote.js' %}"></script>
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']]
+          },
+          startup: {
+            pageReady: () => {
+              return MathJax.startup.defaultPageReady().then(() => {
+                console.log('MathJax is initialized');
+              });
+            }
+          }
+        };
+        </script>
+        <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+
+.courses-container {
+    overflow-y: auto;
+    max-height: calc(100vh - 60px); /* Ajustez 60px selon la hauteur de votre top-bar */
+    padding: 20px;
+}
+
+.course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    
+}
+
+.course-item {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.2s;
+    min-height: 180px;
+}
+
+
+
+.course-item:hover {
+    transform: scale(1.05);
+}
+
+.course-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.course-item h3 {
+    margin: 10px 0 5px;
+    font-size: 16px;
+}
+
+.course-item p {
+    margin: 0;
+    font-size: 12px;
+}
+
+.add-course-button {
+    border: 2px dashed #ccc;
+    background-color: #f8f8f8;
+    cursor: pointer;
+}
+
+.add-course-button:hover {
+    background-color: #e8e8e8;
+}
+
+@media (max-width: 768px) {
+    .course-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .course-item {
+        padding: 10px;
+        min-height: 150px;
+    }
+    
+    .course-icon {
+        font-size: 32px;
+    }
+    
+    .course-item h3 {
+        font-size: 14px;
+    }
+    
+    .course-item p {
+        font-size: 10px;
+    }
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  overflow: auto;
+}
+
+.modal-content {
+  background-color: #fff;
+  margin: 15% auto;
+  padding: 20px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 500px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modal h2 {
+  margin-top: 0;
+  color: #333;
+}
+
+.modal p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+#resetPasswordForm {
+  display: flex;
+  flex-direction: column;
+}
+
+#resetPasswordForm label {
+  margin-bottom: 5px;
+  color: #333;
+}
+
+#resetPasswordForm input,
+#resetPasswordForm button,
+#cancelReset {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+#resetPasswordForm input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.submit-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.cancel-btn {
+  background-color: #f1f1f1;
+  color: #333;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.cancel-btn:hover {
+  background-color: #ddd;
+}
+
+@media (max-width: 600px) {
+  .modal-content {
+    width: 95%;
+    margin: 10% auto;
+  }
+}
+    </style>
+</head>
+<body>
+    <div class="app">
+        <button id="toggleSidebarBtn" class="toggle-sidebar-btn">☰</button>
+        <div class="sidebar">
+            <div class="sidebar-top">
+
+                <button class="new-button" id="newNoteBtn">
+                    <span class="icon">+</span> New
+                </button>
+                
+                <button id="searchBtn"><span class="icon">🔍</span></button>
+                <button id="chatBtn">
+                    <span class="icon-button">🤖</span>
+                </button>
+            </div>
+            <div class="recent-notes">
+                <h3>Notes récentes</h3>
+                <div id="recentNotesList"></div>
+            </div>
+            <div class="note-list">
+                <h3>Toutes mes Notes</h3>
+                <div id="allNotesList"></div>
+            </div>
+            <div class="settings">
+                <button id="resetPasswordBtn">🔑 Réinitialiser le mot de passe</button>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="top-bar">
+                <h1 id="currentCourseTitle">Sélectionnez un cours</h1>
+                <h1 id="noteTitle"></h1>
+                                <!-- Nouveau bouton pour revenir à la vue des cours -->
+                                <button id="courseViewBtn" style="
+                                background-color: #4CAF50;
+                                border: none;
+                                color: white;
+                                padding: 10px 22px;
+                                text-align: center;
+                                text-decoration: none;
+                                display: inline-block;
+                                font-size: 18px;
+                                font-weight: bold;
+                                margin: 3px 2px;
+                                cursor: pointer;
+                                border-radius: 8px;
+                                box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+                                transition: 0.3s;
+                            ">
+                                Mes cours
+                            </button>
+                <div class="top-bar-icons">
+                    <button id="todoBtn"><span class="icon">📋</span></button>
+                </div>
+            </div>
+            <div class="courses-container">
+                <div id="courseGrid" class="course-grid">
+                    {% for course in courses %}
+                    <div class="course-item" data-course-id="{{ course.id }}" style="background-color: {% cycle '#e0f7fa' '#ffcccb' '#fff59d' '#f8bbd0' '#c8e6c9' '#b2ebf2' '#d7ccc8' '#dcedc8' as bgcolors %}">
+                        <div class="course-icon">
+                            {{ course.subject.name|get_subject_icon|safe }}
+                        </div>
+                        <h3>{{ course.subject.name }}</h3>
+                        <p>{{ course.cours_type.name }}</p>
+                        {% if course.teacher %}
+                            <p class="teacher-info">Enseignant: {{ course.teacher.user.first_name }} {{ course.teacher.user.last_name }}</p>
+                        {% else %}
+                            <p class="teacher-info">Enseignant non assigné</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                    <div class="course-item add-course-button" id="addCourseBtn">
+                        <div class="course-icon">+</div>
+                        <h3>Ajouter un cours</h3>
+                    </div>
+                </div>
+            </div>
+            <div id="noteContent" style="display: none;">
+                <div id="attachments"></div>
+                <div class="toolbar">
+                    <button id="saveNoteBtn"><span class="icon">💾</span> Save</button>
+                    <button id="addImageBtn"><span class="icon">🖼️</span> Add Image</button>
+                    <button id="addVideoBtn"><span class="icon">🎥</span> Add Video</button>
+                    <button id="addAudioBtn"><span class="icon">🎵</span> Add Audio</button>
+                    <button id="deleteNoteBtn"><span class="icon">🗑️</span> Delete Note</button>
+                </div>
+                <div id="editor"></div>
+            </div>
+        </div>
+    </div>  
+    
+    <div id="searchOverlay" class="search-overlay" style="display: none;">
+        <div class="search-component">
+            <input type="text" id="searchInput" placeholder="Rechercher des notes...">
+            <ul id="searchResults" class="search-results"></ul>
+        </div>
+    </div>
+
+    <div class="chat-overlay" style="display: none;">
+        <div class="chat-header">
+            <h2>monFocus</h2>
+            <button id="closeChatBtn" class="close-button">×</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Les messages du chatbot seront insérés ici -->
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Ask anything about your notes">
+            <button id="sendChatBtn">Send</button>
+        </div>
+    </div>    
+
+    <div id="todoSidebar" class="todo-sidebar" style="display: none;">
+        <h2>To-Do List</h2>
+        <ul id="todoList"></ul>
+    </div>
+
+    <div id="mediaOverlay" class="media-overlay" style="display: none;">
+        <div class="media-content">
+            <div id="mediaContent"></div>
+            <button id="closeMediaBtn" class="close-button">Fermer</button>
+        </div>
+    </div>
+
+    <div id="addCourseOverlay" class="overlay_cours" style="display: none;">
+        <div class="overlay-content">
+            <h2>Ajouter un nouveau cours</h2>
+            <form id="addCourseForm">
+                {% csrf_token %}
+                <div class="form-step" id="step1">
+                    <h3>Matières</h3>
+                    <p>Quelle matière souhaitez-vous ajouter ?</p>
+                    <div class="options-grid" id="matiereOptions">
+                        <!-- Les options de matières seront ajoutées dynamiquement ici -->
+                    </div>
+                    <button type="button" class="next-button">Suivant</button>
+                </div>
+                <div class="form-step" id="step2" style="display: none;">
+                    <h3>Accompagnement</h3>
+                    <p>Quel type de cours souhaitez-vous ?</p>
+                    <div class="options-list" id="typeCoursOptions">
+                        <!-- Les options de types de cours seront ajoutées dynamiquement ici -->
+                    </div>
+                    <button type="button" class="prev-button">Précédent</button>
+                    <button type="submit">Ajouter le cours</button>
+                </div>
+            </form>
+            <button id="closeOverlayBtn" class="close-button">×</button>
+        </div>
+    </div>
+
+
+     <!-- Modal de pour mdp -->
+     <div id="resetPasswordModal" class="modal">
+        <div class="modal-content">
+          <h2>Réinitialise ton mot de passe</h2>
+          <p>Renseigne l'adresse email de votre compte, nous t'enverrons un lien pour que tu puisse choisir un nouveau mot de passe.</p>
+          <form id="resetPasswordForm">
+            <label for="emailInput">Email associé à ton compte</label>
+            <input type="email" id="emailInput" placeholder="Tape ton email ici" required>
+            <button type="submit" class="submit-btn">Réinitialiser mon mot de passe</button>
+          </form>
+          <button id="cancelReset" class="cancel-btn">J'ai retrouvé mon mot de passe</button>
+        </div>
+      </div>
+
+    <input type="file" id="fileInput" style="display: none;">
+
+</body>
+</html>

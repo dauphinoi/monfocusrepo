@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}monFocus{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'monFocusprof/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'monFocusprof/css/style_about.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/footer.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+    <style>
+.footer {
+    flex-shrink: 0;
+    background-color: #001b44;
+    color: white;
+}
+.footer-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.footer-logo, .footer-section {
+    margin-bottom: 20px;
+}
+.footer-logo {
+    display: flex;
+    align-items: center;
+}
+.footer-logo img {
+    height: 30px;
+    margin-right: 10px;
+}
+.footer-section h3 {
+    margin-bottom: 10px;
+}
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+}
+.footer-section ul li {
+    margin-bottom: 5px;
+}
+.footer-section ul li a {
+    color: white;
+    text-decoration: none;
+}
+.social-links {
+    display: flex;
+    gap: 10px;
+}
+.footer-bottom {
+    text-align: center;
+    padding: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+@media (max-width: 768px) {
+    .footer-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .footer-section {
+        width: 100%;
+        text-align: center;
+    }
+    .social-links {
+        justify-content: center;
+    }
+}
+    </style>
+</head>
+<body>
+    {% block header %}
+    <header id="main-header">
+        <div class="logo">
+            <img src="{% static 'monFocusprof/images/lllo.svg' %}" alt="monFocusprof">
+            <span>monFocus</span>
+        </div>
+        <nav>
+            <div class="menu">
+                <a href="{% url 'index' %}">Accueil</a>
+                <a href="{% url 'index' %}" id="renseignement-link">Je me renseigne</a>
+                <div class="dropdown">
+                    <a href="#">Nos offres</a>
+                    <div class="dropdown-content">
+                        <a href="{% url 'product' %}">Lunette monFocus</a>
+                        <a href="#">Enseignant(e)</a>
+                    </div>
+                </div>
+                <a href="{% url 'accounts:postuler_with_step' step=1 %}" class="btn-devenir">Devenir enseignant <i class="fas fa-arrow-right icon"></i></a>
+                <a href="{% url 'accounts:login_view' %}" class="btn-connect"><i class="fas fa-lock icon"></i> Se connecter à mon espace</a>
+            </div>
+        </nav>
+        <button class="menu-toggle">☰</button>
+    </header>
+    {% endblock %}
+
+    {% block content %}
+    {% endblock %}
+    
+    <script src="{% static 'monFocusprof/js/main.js' %}?v=1.0"></script>
+    {% block extra_js %}{% endblock %}
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-logo">
+                <img src="{% static 'monFocusprof/images/lllo.svg' %}" alt="Logo">
+                <span>monFocus</span>
+            </div>
+            <div class="footer-section">
+                <h3>Entreprise</h3>
+                <ul>
+                    <li><a href="#">À propos</a></li>
+                    <li><a href="#">Recherche</a></li>
+                    <li><a href="#">Carrières</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Nos offres</h3>
+                <ul>
+                    <li><a href="#">Nos enseignants</a></li>
+                    <li><a href="#">Lunettes monFocus</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Social Links</h3>
+                <ul class="social-links">
+                    <li><a href="#"><i class="fab fa-x-twitter"></i></a></li>
+                    <li><a href="#"><i class="fab fa-linkedin"></i></a></li>
+                    <li><a href="#"><i class="fab fa-youtube"></i></a></li>
+                    <li><a href="#"><i class="fab fa-github"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>monFocus Inc ©2024</p>
+            <a href="#top">Aller en haut <i class="fas fa-arrow-up"></i></a>
+        </div>
+    </footer>   
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const timestamp = new Date().getTime();
+            const backgroundUrl = `{% static 'monFocusprof/images/back.svg' %}?v=${timestamp}`;
+            document.body.style.backgroundImage = `url('${backgroundUrl}')`;
+        });
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('institutionContactForm');
+    const successModal = document.getElementById('success-modal');
+    const closeBtn = successModal.querySelector('.close');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                successModal.style.display = 'block';
+            }
+        });
+    });
+
+    closeBtn.addEventListener('click', function() {
+        successModal.style.display = 'none';
+    });
+});
+    </script> 
+</body>
+</html>

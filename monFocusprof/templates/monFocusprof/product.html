@@ -1,0 +1,73 @@
+{% extends 'monFocusprof/base.html' %}
+{% load static %}
+{% block content %}
+
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+
+    .smart-learning-container {
+        width: 100%;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: white;
+    }
+
+    h1 {
+        color: #1a2b5e;
+        font-size: 36px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .description {
+        font-size: 18px;
+        line-height: 1.6;
+        margin-bottom: 30px;
+        color: black;
+        padding: 0 20px;
+    }
+
+    .image-container {
+        width: 100%;
+        margin-bottom: 30px;
+    }
+
+    .full-width-image {
+        width: 100%;
+        max-height: 500px;
+        height: auto;
+        display: block;
+    }
+
+    .launch-announcement {
+        background-color: #1a2b5e;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        font-size: 20px;
+    }
+</style>
+
+<div class="smart-learning-container">
+    <br>
+    <br>
+    <h1>Lunettes Connectées Intelligentes</h1>
+
+    <p class="description">
+        monFocus révolutionne l'apprentissage grâce à des lunettes connectées sophistiquées, boostées par notre logiciel exclusif. Ces lunettes intelligentes accompagnent les étudiants en surveillant leur travail sur divers supports, offrant ainsi une aide précieuse et constante tout au long de leur parcours éducatif. Notre technologie assure un cycle de rétroaction complet, intégrant harmonieusement les étapes d'évaluation, de pratique, d'acquisition de connaissances, de test et d'enseignement au sein d'un unique dispositif.
+    </p>
+
+    <div class="image-container">
+        <img src="{% static 'monFocusprof/images/lunettes_connectees_display.webp' %}" alt="Présentation des lunettes connectées Squirrel AI" class="full-width-image">
+    </div>
+
+    <div class="launch-announcement">
+        <p>La version 1.0 de nos lunettes connectées sera bientôt lancée. Restez à l'écoute pour les mises à jour !</p>
+    </div>
+</div>
+
+{% endblock %}

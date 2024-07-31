@@ -1,0 +1,19 @@
+{% extends 'monFocusprof/base.html' %}
+
+{% block content %}
+<div id="success-overlay" class="overlay">
+  <div class="success-modal">
+    <span class="close-btn">&times;</span>
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24" width="48" height="48">
+        <path fill="#4CAF50" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+      </svg>
+    </div>
+    <h2>Inspection Created Successfully!</h2>
+    <div class="button-group">
+      <button class="btn btn-secondary" onclick="location.href='{% url 'postuler_with_step' step=1 %}'">Add New Inspection</button>
+      <button class="btn btn-primary" onclick="location.href='{% url 'view_inspection' %}'">View Inspection</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends 'monFocusprof/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+
+    .institution-container {
+        width: 100%;
+        padding: 20px;
+        background-color: white;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .institution-title {
+        text-align: center;
+        color: #333;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+    }
+
+    .presentation {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        margin-bottom: 50px;
+    }
+
+    .presentation-item {
+        flex-basis: calc(33.333% - 20px);
+        margin-bottom: 30px;
+        text-align: center;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        transition: transform 0.3s ease;
+    }
+
+    .presentation-item:hover {
+        transform: translateY(-5px);
+    }
+
+    .presentation-item img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+
+    .presentation-item h3 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+
+    .presentation-item p {
+        color: #7f8c8d;
+    }
+
+    .contact-form {
+        background-color: #f2f2f2;
+        padding: 30px;
+        border-radius: 0;
+    }
+
+    .contact-form h2 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 20px;
+    }
+
+    .contact-form form {
+        display: grid;
+        gap: 20px;
+    }
+
+    .contact-form p {
+        margin: 0;
+    }
+
+    .contact-form label {
+        display: block;
+        margin-bottom: 5px;
+        color: #34495e;
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #bdc3c7;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .btn-submit {
+        background-color: #3498db;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-submit:hover {
+        background-color: #2980b9;
+    }
+
+    @media (max-width: 768px) {
+        .presentation-item {
+            flex-basis: 100%;
+        }
+    }
+
+    /* Modal de succès */
+    .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #ffffff;
+    margin: 15% auto;
+    padding: 30px;
+    border: none;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.close {
+    color: #888;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: #333;
+}
+
+.success-icon {
+    font-size: 64px;
+    color: #4CAF50;
+    margin-bottom: 20px;
+}
+
+.modal-content h2 {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.modal-content p {
+    color: #666;
+    font-size: 16px;
+    margin-bottom: 25px;
+}
+
+.button-group {
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 24px;
+    margin: 0 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.btn-secondary {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background-color: #e0e0e0;
+}
+
+.btn-primary {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #45a049;
+}
+</style>
+
+<div class="institution-container">
+    <br>
+    <br>
+    <h1 class="institution-title">Collaboration avec les institutions</h1>
+    
+    <section class="presentation">
+        <div class="presentation-item">
+            <img src="{% static 'monFocusprof/images/tech2.jpg' %}" alt="Enseignement assisté par IA">
+            <h3>Enseignement Augmenté par l'IA</h3>
+            <p>Nos enseignants dispensent leurs cours comme à l'accoutumée, tout en bénéficiant d'un assistant IA personnalisé. En partageant leurs notes de cours via leur espace dédié, ils activent une IA adaptée au contenu, offrant des interactions enrichissantes et une compréhension approfondie de la matière.</p>
+        </div>
+        <div class="presentation-item">
+            <img src="{% static 'monFocusprof/images/tech3.jpg' %}" alt="Apprentissage personnalisé">
+            <h3>Apprentissage Interactif et Personnalisé</h3>
+            <p>Les élèves accèdent à un espace unique où ils peuvent dialoguer avec une IA spécialisée. Cette IA, prenant en compte leur profil individuel et le contenu des cours, offre un soutien sur mesure, renforçant la compréhension et l'assimilation des connaissances enseignées en classe.</p>
+        </div>
+        <div class="presentation-item">
+            <img src="{% static 'monFocusprof/images/tech2.jpg' %}" alt="Assistance continue">
+            <h3>Assistance 24/7 et Résultats Probants</h3>
+            <p>Notre plateforme assure une disponibilité permanente, offrant aux élèves et étudiants un soutien illimité à toute heure. Cette assistance continue, couplée à nos méthodes innovantes, a démontré des résultats remarquables, améliorant significativement les performances académiques et la confiance des apprenants.</p>
+        </div>
+        <div class="presentation-item">
+            <img src="{% static 'monFocusprof/images/tech3.jpg' %}" alt="Assistance continue">
+            <h3>Lunettes Connectées Intelligentes</h3>
+            <p>monFocus transforme l'apprentissage avec des lunettes connectées intelligentes et notre logiciel exclusif. Ces lunettes suivent le travail des étudiants sur divers supports, offrant une assistance continue. Notre technologie assure un cycle complet d'évaluation, de pratique, d'acquisition de connaissances, de test et d'enseignement dans un seul dispositif.</p>
+        </div>
+    </section>
+    
+    <section class="contact-form">
+        <h2>Contactez-nous pour une collaboration</h2>
+        <form id="institutionContactForm" method="post" action="{% url 'institution_contact' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Envoyer</button>
+        </form>
+    </section>
+</div>
+<!-- Modal de succès -->
+<div id="success-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="success-icon">✓</div>
+        <h2>Demande envoyée !</h2>
+        <p>Votre demande de collaboration a été envoyée avec succès.</p>
+        <div class="button-group">
+            <button class="btn btn-secondary" onclick="location.href='{% url 'index' %}'">Retour à l'accueil</button>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

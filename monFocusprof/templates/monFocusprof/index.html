@@ -1,0 +1,120 @@
+{% extends 'monFocusprof/base.html' %}
+{% block title %}Accueil monFocusprof{% endblock %}
+{% block content %}
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+    
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+
+    .typing-effect {
+        font-family: 'Caveat', cursive;
+        font-size: 36px;
+        font-weight: 700;
+        color: white;
+        padding: 30px 0;
+        text-align: center;
+    }
+
+    .cursor {
+        display: inline-block;
+        width: 3px;
+        height: 36px;
+        background-color: #0000ffde;
+        margin-left: 4px;
+        vertical-align: middle;
+    }
+</style>
+
+<div class="hero">
+    <div class="animated-background"></div>
+</div>
+
+<div class="page-content">
+    <div class="typing-effect">
+        <span id="typing-text"></span><span class="cursor">|</span>
+    </div>
+    <div id="profile-section" class="link-section">
+        <div class="link-item">
+            <h2>Je suis un PARENT</h2>
+            <a href="{% url 'accounts:parent_form_step' step=1 %}" class="learn-more">souhaitant des cours pour mon enfant ></a>
+        </div>
+        <div class="link-item">
+            <h2>Je suis un ÉLÈVE ou ÉTUDIANT</h2>
+            <a href="{% url 'accounts:eleve_etudiant_form_step' step=1 %}" class="explore-mission">souhaitant des cours ></a>
+        </div>
+        <div class="link-item">
+            <h2>Nous sommes une institution</h2>
+            <a href="{% url 'institution_contact' %}" class="view-careers">souhaitant une collaboration ></a>
+        </div>
+    </div>
+</div>
+
+<div class="features-section">
+    <div class="feature">
+        <h2>Travailler avec votre IA monFocus</h2>
+        <p>Avec votre IA monFocus, vous travaillez et évoluez à votre manière, selon vos besoins. L'IA s'adapte à vous et vous guide tout au long de votre cursus.</p>
+    </div>
+    <div class="feature">
+        <h2>Cours particuliers en ligne ou à domicile</h2>
+        <p>Des cours adaptés à vos besoins, quand et où vous voulez. En complément de votre IA monFocus.</p>
+    </div>
+    <div class="feature">
+        <h2>Stages intensifs pendant les vacances</h2>
+        <p>Renforcez vos compétences pendant les périodes de congé.</p>
+    </div>
+</div>
+
+<script>
+    const messages = [
+        "Découvrez notre IA révolutionnaire pour l'éducation",
+        "Apprenez à votre rythme avec monFocus",
+        "Une nouvelle façon d'apprendre et de progresser"
+    ];
+
+    let messageIndex = 0;
+    let charIndex = 0;
+    const typingText = document.getElementById('typing-text');
+    const cursor = document.querySelector('.cursor');
+    const typingDelay = 100;
+    const erasingDelay = 50;
+    const newMessageDelay = 2000;
+
+    function typeMessage() {
+        if (charIndex < messages[messageIndex].length) {
+            typingText.textContent += messages[messageIndex].charAt(charIndex);
+            charIndex++;
+            setTimeout(typeMessage, typingDelay);
+        } else {
+            setTimeout(eraseMessage, newMessageDelay);
+        }
+    }
+
+    function eraseMessage() {
+        if (typingText.textContent.length > 0) {
+            typingText.textContent = typingText.textContent.slice(0, -1);
+            setTimeout(eraseMessage, erasingDelay);
+        } else {
+            messageIndex = (messageIndex + 1) % messages.length;
+            charIndex = 0;
+            setTimeout(typeMessage, typingDelay);
+        }
+    }
+
+    function blinkCursor() {
+        cursor.style.visibility = cursor.style.visibility === 'hidden' ? 'visible' : 'hidden';
+    }
+
+    function startEffect() {
+        typeMessage();
+        setInterval(blinkCursor, 500); // Clignotement toutes les 500ms
+    }
+
+    document.addEventListener('DOMContentLoaded', startEffect);
+</script>
+
+{% endblock %}

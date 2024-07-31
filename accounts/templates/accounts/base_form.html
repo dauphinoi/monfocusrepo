@@ -1,0 +1,222 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Formulaire - monFocusprof{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'accounts/css/style_p.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/footer.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/confirmation.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    <style>
+                body {
+            display: flex;
+            flex-direction: column;
+        }
+        .content-wrapper {
+            flex: 1 0 auto;
+        }
+        .footer {
+            flex-shrink: 0;
+            background-color: #001b44;
+            color: white;
+        }
+        .footer-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .footer-logo, .footer-section {
+            margin-bottom: 20px;
+        }
+        .footer-logo {
+            display: flex;
+            align-items: center;
+        }
+        .footer-logo img {
+            height: 30px;
+            margin-right: 10px;
+        }
+        .footer-section h3 {
+            margin-bottom: 10px;
+        }
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        .footer-section ul li {
+            margin-bottom: 5px;
+        }
+        .footer-section ul li a {
+            color: white;
+            text-decoration: none;
+        }
+        .social-links {
+            display: flex;
+            gap: 10px;
+        }
+        .footer-bottom {
+            text-align: center;
+            padding: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        @media (max-width: 768px) {
+            .footer-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .footer-section {
+                width: 100%;
+                text-align: center;
+            }
+            .social-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="timer"><i class="far fa-clock"></i> 1 minute</div>
+            <a href="{% url 'index' %}" class="btn-home">
+                <i class="fas fa-home"></i> Revenir à la page d'accueil
+            </a>
+        </header>
+
+        <div class="progress-bar">
+            <div class="step {% if step >= 1 %}active{% endif %}">Votre profil</div>
+            <div class="step {% if step >= 1 %}active{% endif %}">Votre besoin</div>
+            <div class="step {% if step >= 4 %}active{% endif %}">Votre contact</div>
+        </div>
+
+        <main>
+            <form method="post">
+                {% csrf_token %}
+                
+                {% block form_content %}{% endblock %}
+
+                <div class="form-navigation">
+                    {% if step > 1 %}
+                    <button class="back-button" type="button" onclick="window.location.href='{% url 'accounts:parent_form_step' step=step|add:'-1' %}'"><i class="fas fa-arrow-left"></i> Précédent</button>
+                    {% endif %}
+                    <button type="submit" class="btn-next">
+                        {% if step < 4 %}Suivant{% else %}Envoyer{% endif %}
+                    </button>
+                </div>
+            </form>
+        </main>
+
+        <aside class="sidebar">
+            <div class="advisor">
+                <img src="{% static 'monFocusprof/images/conseiller.jpg' %}" alt="Ibrahima Diao" class="advisor-image">
+                <h3>Ibrahima Diao</h3>
+                <p>conseiller pédagogique</p>
+            </div>
+            <p class="advisor-message">Je sélectionne le meilleur enseignant adapté à {% block advisor_message %}votre besoin{% endblock %}.</p>
+            <p class="benefit-message">Bénéficiez d'un bilan personnalisé offert</p>
+            <p class="phone-number">07 58 64 21 78</p>
+            <div class="tax-credit">
+                <p>50% de crédit d'impôt immédiat</p>
+                <p>(sur les cours à domicile) <i class="fas fa-info-circle"></i></p>
+            </div>
+            <p class="no-commitment">Nos cours sont sans engagement</p>
+        </aside>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-logo">
+                <img src="{% static 'monFocusprof/images/lllo.svg' %}" alt="Logo">
+                <span>monFocus</span>
+            </div>
+            <div class="footer-section">
+                <h3>Entreprise</h3>
+                <ul>
+                    <li><a href="#">À propos</a></li>
+                    <li><a href="#">Recherche</a></li>
+                    <li><a href="#">Carrières</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Nos offres</h3>
+                <ul>
+                    <li><a href="#">Nos enseignants</a></li>
+                    <li><a href="#">Lunettes monFocus</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Social Links</h3>
+                <ul class="social-links">
+                    <li><a href="#"><i class="fab fa-x-twitter"></i></a></li>
+                    <li><a href="#"><i class="fab fa-linkedin"></i></a></li>
+                    <li><a href="#"><i class="fab fa-youtube"></i></a></li>
+                    <li><a href="#"><i class="fab fa-github"></i></a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>monFocus Inc ©2024</p>
+            <a href="#top">Aller en haut <i class="fas fa-arrow-up"></i></a>
+        </div>
+    </footer>
+    <!-- Modal de succès -->
+<div id="success-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="success-icon">✓</div>
+        <h2>Inscription réussie !</h2>
+        <p>Votre profil a été créé avec succès.</p>
+        <div class="button-group">
+            <button class="btn btn-secondary" onclick="location.href='{% url 'index' %}'">Retour à l'accueil</button>
+            <button class="btn btn-primary" onclick="location.href='{% url 'accounts:login_view' %}'">Mon espace personnel</button>
+        </div>
+    </div>
+</div>
+<script src="{% static 'accounts/js/script.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitButton = document.querySelector('button[type="submit"]');
+    const successModal = document.getElementById('success-modal');
+    const closeBtn = successModal.querySelector('.close');
+
+    form.addEventListener('submit', function(e) {
+        if (submitButton.textContent.trim() === 'Envoyer') {
+            e.preventDefault();
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    successModal.style.display = 'block';
+                }
+            });
+        }
+    });
+
+    closeBtn.addEventListener('click', function() {
+        successModal.style.display = 'none';
+    });
+
+    // Fermer le modal si on clique en dehors
+    window.onclick = function(event) {
+        if (event.target == successModal) {
+            successModal.style.display = 'none';
+        }
+    }
+});
+</script>
+</body>
+</html>
