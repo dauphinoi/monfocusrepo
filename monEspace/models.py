@@ -12,7 +12,7 @@ class Note(models.Model):
     content = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    embedding = models.BinaryField(null=True, blank=True)
+    #embedding = models.BinaryField(null=True, blank=True)
     course = models.ForeignKey(VisitorSubjectCourse, on_delete=models.CASCADE, related_name='notes', null=True)
 
     def set_embedding(self, embedding):

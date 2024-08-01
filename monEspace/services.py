@@ -12,6 +12,9 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from django.core.files.storage import default_storage
+from pinecone import Pinecone
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -20,6 +23,11 @@ load_dotenv()
 
 # Initialisez le client OpenAI
 client = OpenAI(api_key=os.getenv('openai_API_KEY'))
+
+
+# Initialisation de Pinecone
+pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+index = pc.Index(settings.PINECONE_INDEX_NAME)
 
 model = SentenceTransformer('all-mpnet-base-v2')
 
@@ -54,46 +62,46 @@ def update_note_embedding(note):
             content += f" {attachment.file_type} {attachment.file.name}"
     
     embedding = generate_embedding(content)
-    note.set_embedding(embedding)
-    note.save()
+    
+    # Upsert l'embedding dans Pinecone
+    index.upsert(vectors=[(str(note.id), embedding.tolist(), {"title": note.title})])
 
 def semantic_search(query, user):
     query_embedding = generate_embedding(query)
-    notes = list(Note.objects.filter(user=user))
-    embeddings = [note.get_embedding() for note in notes if note.get_embedding() is not None]
     
-    if not embeddings:
-        return []
-
-    embeddings_array = np.array(embeddings)
-    
-    faiss.normalize_L2(embeddings_array)
-    index = faiss.IndexFlatIP(embeddings_array.shape[1])
-    index.add(embeddings_array)
-    
-    k = min(3, len(embeddings))
-    scores, indices = index.search(np.array([query_embedding]), k)
+    # Utilisez Pinecone pour la recherche sémantique
+    search_results = index.query(
+        vector=query_embedding.tolist(),
+        top_k=3,
+        include_metadata=True
+    )
     
     results = []
-    for i, idx in enumerate(indices[0]):
-        note = notes[int(idx)]
-        score = float(scores[0][i])
-        clean_content = clean_html(note.content)
-        attachments_info = [
-            {
-                'id': att.id,
-                'file_name': att.file.name,
-                'file_type': att.file_type,
-                'content': att.content if att.file_type == 'image' else None
-            } for att in note.attachments.all()
-        ]
-        results.append({
-            'id': note.id,
-            'title': note.title,
-            'content_preview': clean_content[:100] + '...',
-            'score': score,
-            'attachments': attachments_info
-        })
+    for match in search_results['matches']:
+        try:
+            note = Note.objects.get(id=int(match['id']), user=user)
+            
+            clean_content = clean_html(note.content)
+            attachments_info = [
+                {
+                    'id': att.id,
+                    'file_name': att.file.name,
+                    'file_type': att.file_type,
+                    'content': att.content if att.file_type == 'image' else None
+                } for att in note.attachments.all()
+            ]
+            
+            results.append({
+                'id': note.id,
+                'title': note.title,
+                'content_preview': clean_content[:100] + '...',
+                'score': float(match['score']),
+                'attachments': attachments_info
+            })
+        except ObjectDoesNotExist:
+            # La note n'existe plus dans la base de données
+            # Vous pourriez envisager de supprimer cet ID de Pinecone ici
+            continue
     
     return sorted(results, key=lambda x: x['score'], reverse=True)
 
