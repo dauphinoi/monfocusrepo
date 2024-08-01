@@ -750,6 +750,8 @@ async function deleteNote(noteId) {
         formData.append('file', file);
         formData.append('type', file.type.split('/')[0]);
         formData.append('note_id', selectedNote.id);
+
+        console.log('formData:', formData);
     
         try {
             const response = await fetch('/api/upload/', {

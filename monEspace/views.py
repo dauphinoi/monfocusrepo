@@ -294,6 +294,8 @@ class NoteViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.delete() 
+from django.core.files.storage import get_storage_class
+from django.core.files.base import ContentFile
 
 class AttachmentViewSet(viewsets.ModelViewSet):
     serializer_class = AttachmentSerializer
@@ -328,32 +330,42 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
             file = self.request.FILES.get('file')
             if file:
+                # Utiliser le stockage média
+                MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)
+                media_storage = MediaStorage()
+
                 # Générer un nom de fichier unique
-                file_name = f"{file_type}/{note_id}/{file.name}"
+                file_name = f"{file_type}/{note_id}/{os.path.basename(file.name)}"
+                
+                # Lire le contenu du fichier
+                file_content = ContentFile(file.read())
                 
                 # Sauvegarder le fichier
-                file_path = default_storage.save(file_name, file)
+                file_path = media_storage.save(file_name, file_content)
+                
+                # Obtenir l'URL du fichier
+                file_url = media_storage.url(file_path)
                 
                 # Créer l'attachement
                 attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
                 
                 # Analyse de l'image si c'est une image
                 if file_type == 'image':
-                    image_content = analyze_image_with_gpt4(default_storage.path(file_path))
+                    image_content = analyze_image_with_gpt4(media_storage.open(file_path).name)
                     attachment.content = image_content
                     attachment.save()
                 
                 update_note_embedding(attachment.note)
                 
                 # Renvoyer les données de l'attachement
-                return JsonResponse({
+                return {
                     'id': attachment.id,
-                    'file': default_storage.url(file_path),
+                    'file': file_url,
                     'file_type': attachment.file_type,
                     'created_at': attachment.created_at.isoformat(),
                     'note': attachment.note_id,
                     'content': attachment.content if file_type == 'image' else None
-                })
+                }
             else:
                 raise ValidationError({"error": "Aucun fichier n'a été fourni."})
         except Exception as e:
