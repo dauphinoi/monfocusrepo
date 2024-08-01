@@ -13,8 +13,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from django.core.files.storage import default_storage
 
-# nltk.download('punkt')
-# nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('stopwords')
 
 load_dotenv()
 
