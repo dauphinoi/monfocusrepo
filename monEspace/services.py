@@ -11,6 +11,7 @@ import base64
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+from django.core.files.storage import default_storage
 
 # nltk.download('punkt')
 # nltk.download('stopwords')
@@ -97,7 +98,7 @@ def semantic_search(query, user):
     return sorted(results, key=lambda x: x['score'], reverse=True)
 
 def analyze_image_with_gpt4(image_path):
-    with open(image_path, "rb") as image_file:
+    with default_storage.open(image_path, 'rb') as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
 
     try:

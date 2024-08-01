@@ -759,8 +759,15 @@ async function deleteNote(noteId) {
                 },
                 body: formData,
             });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
             const data = await response.json();
+            console.log('File uploaded:', data);
             if (data.id) {
+                console.log('File uploaded:', data);
                 const newAttachment = {
                     id: data.id,
                     file: data.file,
@@ -770,11 +777,24 @@ async function deleteNote(noteId) {
                 };
                 selectedNote.attachments = [...(selectedNote.attachments || []), newAttachment];
                 renderAttachments(selectedNote.attachments);
+                updateNoteInList(selectedNote);
+                alert('Fichier uploadé avec succès!');
+            } else if (data.error) {
+                throw new Error(data.error);
             } else {
-                console.error('Error uploading file:', data.error);
+                throw new Error('Réponse inattendue du serveur');
             }
         } catch (error) {
             console.error('Error uploading file:', error);
+            alert(`Erreur lors de l'upload du fichier : ${error.message}`);
+        }
+    }
+    
+    function updateNoteInList(updatedNote) {
+        const noteIndex = courseNotes.findIndex(note => note.id === updatedNote.id);
+        if (noteIndex !== -1) {
+            courseNotes[noteIndex] = updatedNote;
+            renderNotes();
         }
     }
 

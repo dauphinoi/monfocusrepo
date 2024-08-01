@@ -1,4 +1,5 @@
 from datetime import timezone
+from django.core.files.storage import default_storage
 import json
 import os
 from rest_framework import viewsets, status, permissions
@@ -325,32 +326,38 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                 if note.user != self.request.user and not hasattr(user, 'teacher'):
                     raise ValidationError({"error": "Vous ne pouvez ajouter des attachements qu'à vos propres notes."})
 
-            # Renommage du fichier
             file = self.request.FILES.get('file')
-            if file and file_type == 'image':
-                new_name = f'page_{self._get_next_page_number(note)}'
-                file.name = new_name
-
-            attachment = serializer.save(note_id=note_id, file_type=file_type)
-            
-            # Analyse de l'image si c'est une image
-            if file_type == 'image':
-                image_content = analyze_image_with_gpt4(attachment.file.path)
-                attachment.content = image_content
-                attachment.save()
-            
-            update_note_embedding(attachment.note)
-            
-            # Renvoyer les données de l'attachement
-            return {
-                'id': attachment.id,
-                'file': self.request.build_absolute_uri(attachment.file.url),
-                'file_type': attachment.file_type,
-                'created_at': attachment.created_at.isoformat(),
-                'note': attachment.note_id,
-                'content': attachment.content if file_type == 'image' else None
-            }
+            if file:
+                # Générer un nom de fichier unique
+                file_name = f"{file_type}/{note_id}/{file.name}"
+                
+                # Sauvegarder le fichier
+                file_path = default_storage.save(file_name, file)
+                
+                # Créer l'attachement
+                attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
+                
+                # Analyse de l'image si c'est une image
+                if file_type == 'image':
+                    image_content = analyze_image_with_gpt4(default_storage.path(file_path))
+                    attachment.content = image_content
+                    attachment.save()
+                
+                update_note_embedding(attachment.note)
+                
+                # Renvoyer les données de l'attachement
+                return JsonResponse({
+                    'id': attachment.id,
+                    'file': default_storage.url(file_path),
+                    'file_type': attachment.file_type,
+                    'created_at': attachment.created_at.isoformat(),
+                    'note': attachment.note_id,
+                    'content': attachment.content if file_type == 'image' else None
+                })
+            else:
+                raise ValidationError({"error": "Aucun fichier n'a été fourni."})
         except Exception as e:
+            logger.error(f"Erreur lors de la création de l'attachement: {str(e)}")
             raise ValidationError({"error": str(e)})
     
 
@@ -377,9 +384,12 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        attachment_data = self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(attachment_data, status=status.HTTP_201_CREATED, headers=headers)
+        try:
+            attachment_data = self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(attachment_data, status=status.HTTP_201_CREATED, headers=headers)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
