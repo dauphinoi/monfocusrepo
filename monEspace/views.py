@@ -1,4 +1,4 @@
-from datetime import timezone, timedelta
+from datetime import timezone
 from django.core.files.storage import default_storage
 import json
 import os
@@ -6,28 +6,19 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from .models import ChatMessage, ChatSession, HourDeclaration, Note, Attachment, TodoItem
+from .serializers import NoteSerializer, AttachmentSerializer, TodoItemSerializer
+from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError, PermissionDenied
-from django.db.models import Q
+from .services import analyze_image_with_gpt4, update_note_embedding, semantic_search
+import logging
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse, StreamingHttpResponse
-from django.core.mail import send_mail
-from django.utils import timezone
-from django.conf import settings
-from accounts.models import Subject, CoursType
-from .models import (
-    ChatMessage, ChatSession, HourDeclaration, Note, Attachment, TodoItem,
-    VisitorSubjectCourse
-)
-from .serializers import NoteSerializer, AttachmentSerializer, TodoItemSerializer
-from .services import analyze_image_with_gpt4, update_note_embedding, semantic_search, get_pinecone_index
-from huggingface_hub import InferenceClient
-import logging
-from pinecone import Pinecone
-
-logger = logging.getLogger(__name__)
+from accounts.models import Visitor, Subject, Level, CoursType, VisitorSubjectCourse, Teacher
+from django.http import JsonResponse
+from transformers import pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -298,20 +289,9 @@ class NoteViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        
-        try:
-            # Supprimer l'embedding de Pinecone
-            index = get_pinecone_index()
-            index.delete(ids=[str(instance.id)])
-            
-            # Supprimer la note de la base de données
-            self.perform_destroy(instance)
-            
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            logger.error(f"Erreur lors de la suppression de la note et de son embedding : {str(e)}")
-            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def perform_destroy(self, instance):
         instance.delete() 
 from django.core.files.storage import get_storage_class
@@ -438,7 +418,19 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-
+from openai import OpenAI
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.http import StreamingHttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from .models import ChatSession, ChatMessage, Note
+from .services import semantic_search
+from django.conf import settings
+from huggingface_hub import InferenceClient
 
 
 class ChatViewSet(viewsets.ViewSet):
@@ -624,7 +616,8 @@ class ChatViewSet(viewsets.ViewSet):
 
 #Gestions de la declaration des heures
 
-
+from django.core.mail import send_mail
+from datetime import timedelta
 
 @login_required
 @require_POST

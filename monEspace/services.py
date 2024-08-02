@@ -1,29 +1,33 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
+import faiss
 from .models import Note
 import re
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+import nltk
 from bs4 import BeautifulSoup
 import base64
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
 from django.core.files.storage import default_storage
 from pinecone import Pinecone
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from functools import lru_cache
+
+nltk.download('punkt')
+nltk.download('stopwords')
+
+load_dotenv()
 
 # Initialisez le client OpenAI
 client = OpenAI(api_key=os.getenv('openai_API_KEY'))
 
-@lru_cache(maxsize=1)
-def get_pinecone_index():
-    pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-    return pc.Index(settings.PINECONE_INDEX_NAME)
 
 # Initialisation de Pinecone
-index = get_pinecone_index()
+pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+index = pc.Index(settings.PINECONE_INDEX_NAME)
 
 model = SentenceTransformer('all-mpnet-base-v2')
 
