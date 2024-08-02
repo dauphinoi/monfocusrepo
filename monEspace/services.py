@@ -12,14 +12,18 @@ from django.core.files.storage import default_storage
 from pinecone import Pinecone
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from functools import lru_cache
 
 # Initialisez le client OpenAI
 client = OpenAI(api_key=os.getenv('openai_API_KEY'))
 
+@lru_cache(maxsize=1)
+def get_pinecone_index():
+    pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+    return pc.Index(settings.PINECONE_INDEX_NAME)
 
 # Initialisation de Pinecone
-pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-index = pc.Index(settings.PINECONE_INDEX_NAME)
+index = get_pinecone_index()
 
 model = SentenceTransformer('all-mpnet-base-v2')
 

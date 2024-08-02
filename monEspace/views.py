@@ -22,9 +22,10 @@ from .models import (
     VisitorSubjectCourse
 )
 from .serializers import NoteSerializer, AttachmentSerializer, TodoItemSerializer
-from .services import analyze_image_with_gpt4, update_note_embedding, semantic_search
+from .services import analyze_image_with_gpt4, update_note_embedding, semantic_search, get_pinecone_index
 from huggingface_hub import InferenceClient
 import logging
+from pinecone import Pinecone
 
 logger = logging.getLogger(__name__)
 
@@ -297,9 +298,20 @@ class NoteViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
+        
+        try:
+            # Supprimer l'embedding de Pinecone
+            index = get_pinecone_index()
+            index.delete(ids=[str(instance.id)])
+            
+            # Supprimer la note de la base de données
+            self.perform_destroy(instance)
+            
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(f"Erreur lors de la suppression de la note et de son embedding : {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
     def perform_destroy(self, instance):
         instance.delete() 
 from django.core.files.storage import get_storage_class
