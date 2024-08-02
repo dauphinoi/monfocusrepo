@@ -1,25 +1,17 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
-import faiss
 from .models import Note
 import re
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-import nltk
 from bs4 import BeautifulSoup
 import base64
 import os
 from openai import OpenAI
-from dotenv import load_dotenv
 from django.core.files.storage import default_storage
 from pinecone import Pinecone
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-
-nltk.download('punkt')
-nltk.download('stopwords')
-
-load_dotenv()
 
 # Initialisez le client OpenAI
 client = OpenAI(api_key=os.getenv('openai_API_KEY'))
