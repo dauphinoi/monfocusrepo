@@ -19,6 +19,8 @@ from django.views.decorators.http import require_POST
 from accounts.models import Visitor, Subject, Level, CoursType, VisitorSubjectCourse, Teacher
 from django.http import JsonResponse
 from transformers import pipeline
+from pinecone import Pinecone
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -289,8 +291,20 @@ class NoteViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        try:
+            # Supprimer l'embedding de Pinecone
+            pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+            index = pc.Index(settings.PINECONE_INDEX_NAME)
+            index.delete(ids=[str(instance.id)])
+            
+            # Supprimer la note de la base de données
+            self.perform_destroy(instance)
+            
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(f"Erreur lors de la suppression de la note et de son embedding : {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_destroy(self, instance):
         instance.delete() 
