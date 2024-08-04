@@ -15,6 +15,7 @@ class Institution(models.Model):
     is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     auth_key = models.CharField(max_length=255, unique=True)  # Clé d'API pour l'authentification SSO
+    sso_url = models.URLField(max_length=255)  # URL de connexion SSO
 
     def __str__(self):
         return self.name

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirection SSO</title>
+</head>
+<body onload="document.getElementById('sso-form').submit();">
+    <form id="sso-form" method="post" action="{{ sso_url }}">
+        {% csrf_token %}
+        <input type="hidden" name="institution_id" value="{{ institution_id }}">
+    </form>
+    <p>Redirection en cours...</p>
+</body>
+</html>
