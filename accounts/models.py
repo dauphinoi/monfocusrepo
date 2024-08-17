@@ -2,20 +2,34 @@ from django.db import IntegrityError, models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 
+from django.db import models
+
 class Institution(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, verbose_name="Nom")
     type = models.CharField(max_length=50, choices=[
         ('soutien_scolaire', 'Soutien scolaire'),
         ('education_superieur', 'Éducation supérieur'),
         ('formation_pro', 'Formation professionnelle'),
         ('autre', 'Autre')
-    ])
-    contact_name = models.CharField(max_length=100)
-    email = models.EmailField()
-    is_active = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    auth_key = models.CharField(max_length=255, unique=True)  # Clé d'API pour l'authentification SSO
-    sso_url = models.URLField(max_length=255)  # URL de connexion SSO
+    ], verbose_name="Type")
+    contact_name = models.CharField(max_length=100, verbose_name="Nom du contact")
+    email = models.EmailField(verbose_name="Email")
+    is_active = models.BooleanField(default=False, verbose_name="Actif")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
+    auth_key = models.CharField(max_length=255, unique=True, verbose_name="Clé d'API")
+    sso_url = models.URLField(max_length=255, verbose_name="URL de connexion SSO")
+
+    # Nouveaux champs pour la gestion des partenaires
+    logo = models.ImageField(upload_to='institution_logos/', blank=True, null=True, verbose_name="Logo")
+    website = models.URLField(blank=True, verbose_name="Site web")
+    description = models.TextField(blank=True, verbose_name="Description")
+    is_partner = models.BooleanField(default=False, verbose_name="Est un partenaire")
+    partner_order = models.PositiveIntegerField(default=0, verbose_name="Ordre d'affichage (partenaire)")
+
+    class Meta:
+        ordering = ['partner_order', 'name']
+        verbose_name = "Institution"
+        verbose_name_plural = "Institutions"
 
     def __str__(self):
         return self.name

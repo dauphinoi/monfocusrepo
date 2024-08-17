@@ -22,6 +22,21 @@ from transformers import pipeline
 from pinecone import Pinecone
 from django.conf import settings
 
+#
+from openai import OpenAI
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.http import StreamingHttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from .models import ChatSession, ChatMessage, Note
+from .services import semantic_search
+from django.conf import settings
+from huggingface_hub import InferenceClient
+
 logger = logging.getLogger(__name__)
 
 
@@ -225,6 +240,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             raise
 
     def perform_update(self, serializer):
+        # A REVOIR
         note = serializer.save()
         update_note_embedding(note)
 
@@ -363,7 +379,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                 # Créer l'attachement
                 attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
                 
-                # Analyse de l'image si c'est une image
+                # Analyse de l'image si c'est une imageð
                 if file_type == 'image':
                     image_content = analyze_image_with_gpt4(media_storage.open(file_path).name)
                     attachment.content = image_content
@@ -432,19 +448,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-from openai import OpenAI
-from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.http import StreamingHttpResponse
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
-from .models import ChatSession, ChatMessage, Note
-from .services import semantic_search
-from django.conf import settings
-from huggingface_hub import InferenceClient
+
 
 
 class ChatViewSet(viewsets.ViewSet):

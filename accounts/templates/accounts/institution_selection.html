@@ -11,8 +11,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .container {
             background-color: white;
@@ -22,10 +24,16 @@
             max-width: 500px;
             width: 100%;
         }
-        h1 {
+        h1, h2 {
             color: #333;
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
+            word-wrap: break-word;
+        }
+        p {
+            text-align: center;
+            margin-bottom: 1rem;
+            word-wrap: break-word;
         }
         .icon {
             text-align: center;
@@ -38,6 +46,7 @@
             margin-bottom: 1rem;
             border: 1px solid #ccc;
             border-radius: 4px;
+            box-sizing: border-box;
         }
         button {
             width: 100%;
@@ -56,8 +65,34 @@
             margin-top: 1rem;
         }
         .checkbox-group label {
-            display: block;
+            display: flex;
+            align-items: center;
             margin-bottom: 0.5rem;
+            word-wrap: break-word;
+        }
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+            .icon {
+                font-size: 2rem;
+            }
+            button {
+                padding: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -78,10 +113,12 @@
             <button type="submit">Sélectionner</button>
             <div class="checkbox-group">
                 <label>
-                    <input type="checkbox" name="remember_session"> Se souvenir de la sélection pour cette session
+                    <input type="checkbox" name="remember_session">
+                    <span>Se souvenir de la sélection pour cette session</span>
                 </label>
                 <label>
-                    <input type="checkbox" name="remember_permanent"> Se souvenir de la sélection de façon permanente
+                    <input type="checkbox" name="remember_permanent">
+                    <span>Se souvenir de la sélection de façon permanente</span>
                 </label>
             </div>
         </form>

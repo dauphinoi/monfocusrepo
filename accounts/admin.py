@@ -8,4 +8,10 @@ admin.site.register(Level)
 admin.site.register(CoursType)
 admin.site.register(Visitor)
 admin.site.register(VisitorSubjectCourse)
-admin.site.register(Institution)
+
+@admin.register(Institution)
+class InstitutionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'type', 'is_active', 'is_partner', 'partner_order')
+    list_editable = ('is_active', 'is_partner', 'partner_order')
+    list_filter = ('type', 'is_active', 'is_partner')
+    search_fields = ('name', 'contact_name', 'email')

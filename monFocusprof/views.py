@@ -3,6 +3,8 @@ from django.core.mail import send_mail
 from django.contrib import messages
 
 from django.conf import settings
+
+from accounts.models import Institution
 from .forms import InstitutionContactForm
 
 # Create your views here.
@@ -10,8 +12,12 @@ from .forms import InstitutionContactForm
 def product_view(request):
     return render(request, 'monFocusprof/product.html')
 
+# def index(request):
+#     return render(request, "monFocusprof/index.html")
+
 def index(request):
-    return render(request, "monFocusprof/index.html")
+    partners = Institution.objects.filter(is_active=True, is_partner=True).order_by('partner_order', 'name')
+    return render(request, 'monFocusprof/index.html', {'partners': partners})
 
 
 from django.http import JsonResponse

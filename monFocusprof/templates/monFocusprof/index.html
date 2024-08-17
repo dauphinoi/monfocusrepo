@@ -18,6 +18,10 @@
         color: white;
         padding: 30px 0;
         text-align: center;
+        height: 40px; /* Hauteur fixe pour éviter le glissement */
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     .cursor {
@@ -27,6 +31,76 @@
         background-color: #0000ffde;
         margin-left: 4px;
         vertical-align: middle;
+    }
+
+    .partners-section {
+        padding: 60px 0;
+        background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
+        overflow: hidden;
+    }
+
+    .partners-section h2 {
+        text-align: center;
+        font-size: 2.5rem;
+        color: #333;
+        margin-bottom: 40px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .partners-carousel {
+        position: relative;
+        overflow: hidden;
+        height: 120px;
+        margin: 0 auto;
+        max-width: 1200px;
+    }
+
+    .partners-track {
+        display: flex;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    .partner-item {
+        flex: 0 0 200px;
+        height: 100px;
+        margin-right: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .partner-item img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+
+    .partner-item:hover img {
+        transform: scale(1.1);
+    }
+
+    @media (max-width: 768px) {
+        .partners-carousel {
+            height: 100px;
+        }
+        .partner-item {
+            flex: 0 0 150px;
+            margin-right: 30px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .partners-carousel {
+            height: 80px;
+        }
+        .partner-item {
+            flex: 0 0 120px;
+            margin-right: 20px;
+        }
     }
 </style>
 
@@ -54,26 +128,28 @@
     </div>
 </div>
 
-<div class="features-section">
-    <div class="feature">
-        <h2>Travailler avec votre IA monFocus</h2>
-        <p>Avec votre IA monFocus, vous travaillez et évoluez à votre manière, selon vos besoins. L'IA s'adapte à vous et vous guide tout au long de votre cursus.</p>
+<section class="partners-section">
+    <h2>Nos partenaires</h2>
+    <div class="partners-carousel">
+        <div class="partners-track">
+            {% for partner in partners %}
+            <div class="partner-item">
+                {% if partner.logo %}
+                    <img src="{{ partner.logo.url }}" alt="{{ partner.name }}" title="{{ partner.name }}">
+                {% else %}
+                    <span>{{ partner.name }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
     </div>
-    <div class="feature">
-        <h2>Cours particuliers en ligne ou à domicile</h2>
-        <p>Des cours adaptés à vos besoins, quand et où vous voulez. En complément de votre IA monFocus.</p>
-    </div>
-    <div class="feature">
-        <h2>Stages intensifs pendant les vacances</h2>
-        <p>Renforcez vos compétences pendant les périodes de congé.</p>
-    </div>
-</div>
+</section>
 
 <script>
     const messages = [
-        "Découvrez notre IA révolutionnaire pour l'éducation",
-        "Apprenez à votre rythme avec monFocus",
-        "Une nouvelle façon d'apprendre et de progresser"
+        "L'éducation à l'ère de l'IA",
+        "Un apprentissage qui s'adapte à vous",
+        "monFocus : l'intelligence au service de tous"
     ];
 
     let messageIndex = 0;
@@ -86,8 +162,12 @@
 
     function typeMessage() {
         if (charIndex < messages[messageIndex].length) {
-            typingText.textContent += messages[messageIndex].charAt(charIndex);
-            charIndex++;
+            if (typingText.textContent.length > 0 && typingText.textContent[typingText.textContent.length - 1] === ' ' && messages[messageIndex][charIndex] === ' ') {
+                charIndex++;
+            } else {
+                typingText.textContent += messages[messageIndex].charAt(charIndex);
+                charIndex++;
+            }
             setTimeout(typeMessage, typingDelay);
         } else {
             setTimeout(eraseMessage, newMessageDelay);
@@ -115,6 +195,49 @@
     }
 
     document.addEventListener('DOMContentLoaded', startEffect);
+  
+    document.addEventListener('DOMContentLoaded', function() {
+        const track = document.querySelector('.partners-track');
+        const partners = document.querySelectorAll('.partner-item');
+        let animationId;
+        const speed = 1; // Ajustez la vitesse ici
+
+        function setupTrack() {
+            const totalWidth = Array.from(partners).reduce((sum, partner) => 
+                sum + partner.offsetWidth + parseFloat(getComputedStyle(partner).marginRight), 0);
+            track.style.width = `${totalWidth * 2}px`;
+            
+            // Dupliquer les partenaires pour un défilement infini
+            partners.forEach(partner => {
+                const clone = partner.cloneNode(true);
+                track.appendChild(clone);
+            });
+        }
+
+        function animate() {
+            if (track.offsetLeft <= -track.offsetWidth / 2) {
+                track.style.left = '0px';
+            }
+            track.style.left = `${track.offsetLeft - speed}px`;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        setupTrack();
+        animate();
+
+        // Pause on hover
+        track.addEventListener('mouseenter', () => cancelAnimationFrame(animationId));
+        track.addEventListener('mouseleave', () => animationId = requestAnimationFrame(animate));
+
+        // Gestion du redimensionnement
+        window.addEventListener('resize', () => {
+            cancelAnimationFrame(animationId);
+            track.innerHTML = '';
+            Array.from(partners).forEach(partner => track.appendChild(partner));
+            setupTrack();
+            animate();
+        });
+    });
 </script>
 
 {% endblock %}

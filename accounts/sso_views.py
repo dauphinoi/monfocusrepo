@@ -221,9 +221,7 @@ class SSOLoginView(APIView):
             raise ValueError(f"Invalid token: {str(e)}")
 
     def get_redirect_response(self, user_type):
-        if user_type == 'teacher':
-            redirect_url = reverse('monEspace:espacenote')
-        elif user_type == 'visitor':
+        if user_type == 'teacher' or user_type == 'visitor':
             redirect_url = reverse('monEspace:espacenote')
         else:
             return Response({"error": "Invalid user type"}, status=status.HTTP_400_BAD_REQUEST)

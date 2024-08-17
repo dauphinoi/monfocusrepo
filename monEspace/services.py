@@ -61,6 +61,8 @@ def update_note_embedding(note):
         else:
             content += f" {attachment.file_type} {attachment.file.name}"
     
+    # essayer peut etre de ne pas stocker ce vecteur dans cette variable  et dans le mettre dire
+    #directement dans la fonction upsert
     embedding = generate_embedding(content)
     
     # Upsert l'embedding dans Pinecone
