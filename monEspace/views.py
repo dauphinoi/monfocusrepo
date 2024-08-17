@@ -324,8 +324,8 @@ class NoteViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.delete() 
-# from django.core.files.storage import get_storage_class
-# from django.core.files.base import ContentFile
+from django.core.files.storage import get_storage_class
+from django.core.files.base import ContentFile
 
 class AttachmentViewSet(viewsets.ModelViewSet):
     serializer_class = AttachmentSerializer
@@ -344,89 +344,44 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         else:
             return Attachment.objects.filter(note__user=user)
 
-    # def perform_create(self, serializer):
-    #     try:
-    #         note_id = self.request.data.get('note_id')
-    #         file_type = self.request.data.get('type')
-            
-    #         if note_id:
-    #             user = self.request.user
-    #             if hasattr(user, 'teacher'):
-    #                 note = Note.objects.get(id=note_id, course__teacher=user.teacher)
-    #             else:
-    #                 note = Note.objects.get(id=note_id, user=user)
-    #             if note.user != self.request.user and not hasattr(user, 'teacher'):
-    #                 raise ValidationError({"error": "Vous ne pouvez ajouter des attachements qu'à vos propres notes."})
-
-    #         file = self.request.FILES.get('file')
-    #         if file:
-    #             # Utiliser le stockage média
-    #             MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)
-    #             media_storage = MediaStorage()
-
-    #             # Générer un nom de fichier unique
-    #             file_name = f"{file_type}/{note_id}/{os.path.basename(file.name)}"
-                
-    #             # Lire le contenu du fichier
-    #             file_content = ContentFile(file.read())
-                
-    #             # Sauvegarder le fichier
-    #             file_path = media_storage.save(file_name, file_content)
-                
-    #             # Obtenir l'URL du fichier
-    #             file_url = media_storage.url(file_path)
-                
-    #             # Créer l'attachement
-    #             attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
-                
-    #             # Analyse de l'image si c'est une imageð
-    #             if file_type == 'image':
-    #                 image_content = analyze_image_with_gpt4(media_storage.open(file_path).name)
-    #                 attachment.content = image_content
-    #                 attachment.save()
-                
-    #             update_note_embedding(attachment.note)
-                
-    #             # Renvoyer les données de l'attachement
-    #             return {
-    #                 'id': attachment.id,
-    #                 'file': file_url,
-    #                 'file_type': attachment.file_type,
-    #                 'created_at': attachment.created_at.isoformat(),
-    #                 'note': attachment.note_id,
-    #                 'content': attachment.content if file_type == 'image' else None
-    #             }
-    #         else:
-    #             raise ValidationError({"error": "Aucun fichier n'a été fourni."})
-    #     except Exception as e:
-    #         logger.error(f"Erreur lors de la création de l'attachement: {str(e)}")
-    #         raise ValidationError({"error": str(e)})
-    
     def perform_create(self, serializer):
-            try:
-                note_id = self.request.data.get('note_id')
-                file_type = self.request.data.get('type')
-                
-                if note_id:
-                    user = self.request.user
-                    if hasattr(user, 'teacher'):
-                        note = Note.objects.get(id=note_id, course__teacher=user.teacher)
-                    else:
-                        note = Note.objects.get(id=note_id, user=user)
-                    if note.user != self.request.user and not hasattr(user, 'teacher'):
-                        raise ValidationError({"error": "Vous ne pouvez ajouter des attachements qu'à vos propres notes."})
+        try:
+            note_id = self.request.data.get('note_id')
+            file_type = self.request.data.get('type')
+            
+            if note_id:
+                user = self.request.user
+                if hasattr(user, 'teacher'):
+                    note = Note.objects.get(id=note_id, course__teacher=user.teacher)
+                else:
+                    note = Note.objects.get(id=note_id, user=user)
+                if note.user != self.request.user and not hasattr(user, 'teacher'):
+                    raise ValidationError({"error": "Vous ne pouvez ajouter des attachements qu'à vos propres notes."})
 
-                # Renommage du fichier
-                file = self.request.FILES.get('file')
-                if file and file_type == 'image':
-                    new_name = f'page_{self._get_next_page_number(note)}'
-                    file.name = new_name
+            file = self.request.FILES.get('file')
+            if file:
+                # Utiliser le stockage média
+                MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)
+                media_storage = MediaStorage()
 
-                attachment = serializer.save(note_id=note_id, file_type=file_type)
+                # Générer un nom de fichier unique
+                file_name = f"{file_type}/{note_id}/{os.path.basename(file.name)}"
                 
-                # Analyse de l'image si c'est une image
+                # Lire le contenu du fichier
+                file_content = ContentFile(file.read())
+                
+                # Sauvegarder le fichier
+                file_path = media_storage.save(file_name, file_content)
+                
+                # Obtenir l'URL du fichier
+                file_url = media_storage.url(file_path)
+                
+                # Créer l'attachement
+                attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
+                
+                # Analyse de l'image si c'est une imageð
                 if file_type == 'image':
-                    image_content = analyze_image_with_gpt4(attachment.file.path)
+                    image_content = analyze_image_with_gpt4(media_storage.open(file_path).name)
                     attachment.content = image_content
                     attachment.save()
                 
@@ -435,15 +390,19 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                 # Renvoyer les données de l'attachement
                 return {
                     'id': attachment.id,
-                    'file': self.request.build_absolute_uri(attachment.file.url),
+                    'file': file_url,
                     'file_type': attachment.file_type,
                     'created_at': attachment.created_at.isoformat(),
                     'note': attachment.note_id,
                     'content': attachment.content if file_type == 'image' else None
                 }
-            except Exception as e:
-                raise ValidationError({"error": str(e)})
-        
+            else:
+                raise ValidationError({"error": "Aucun fichier n'a été fourni."})
+        except Exception as e:
+            logger.error(f"Erreur lors de la création de l'attachement: {str(e)}")
+            raise ValidationError({"error": str(e)})
+    
+
     def _get_next_page_number(self, note):
         existing_attachments = Attachment.objects.filter(note=note, file_type='image')
         return len(existing_attachments) + 1
