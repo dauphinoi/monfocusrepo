@@ -56,7 +56,7 @@ class Institution(models.Model):
         if self.logo:
             storage = get_storage_class(settings.DEFAULT_FILE_STORAGE)()
             filename = storage.save(
-                f"institution_logos/{self.name}/{self.logo.name}",
+                f"institution_logos/{self.logo.name}",
                 self.logo
             )
             self.logo.name = filename    
