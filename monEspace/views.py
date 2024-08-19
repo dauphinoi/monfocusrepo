@@ -324,7 +324,16 @@ class NoteViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.delete() 
-from django.core.files.storage import get_storage_class
+try:
+    from django.core.files.storage import get_storage_class
+except ImportError:
+    try:
+        from django.core.files.storage import storages
+        get_storage_class = storages.get_storage_class
+    except AttributeError:
+        from django.core.files.storage import Storage
+        def get_storage_class(import_path=None):
+            return Storage
 from django.core.files.base import ContentFile
 
 class AttachmentViewSet(viewsets.ModelViewSet):
