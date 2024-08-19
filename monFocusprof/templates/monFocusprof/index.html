@@ -128,22 +128,22 @@
     </div>
 </div>
 
-<section class="partners-section">
+<div class="section partners-section">
     <h2>Nos partenaires</h2>
     <div class="partners-carousel">
         <div class="partners-track">
             {% for partner in partners %}
-            <div class="partner-item">
-                {% if partner.logo %}
-                    <img src="{{ partner.logo.url }}" alt="{{ partner.name }}" title="{{ partner.name }}">
-                {% else %}
-                    <span>{{ partner.name }}</span>
-                {% endif %}
-            </div>
+                <div class="partner-item">
+                    {% if partner.logo_url %}
+                        <img src="{{ partner.logo_url }}" alt="{{ partner.name }}" title="{{ partner.name }}">
+                    {% else %}
+                        {{ partner.name }}
+                    {% endif %}
+                </div>
             {% endfor %}
         </div>
     </div>
-</section>
+</div>
 
 <script>
     const messages = [
