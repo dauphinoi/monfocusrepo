@@ -4,6 +4,10 @@ from django.utils.text import slugify
 
 from django.db import models
 
+import secrets
+from django.db import models
+from django.core.exceptions import ValidationError
+
 class Institution(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nom")
     type = models.CharField(max_length=50, choices=[
@@ -16,7 +20,7 @@ class Institution(models.Model):
     email = models.EmailField(verbose_name="Email")
     is_active = models.BooleanField(default=False, verbose_name="Actif")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
-    auth_key = models.CharField(max_length=255, unique=True, verbose_name="Clé d'API")
+    auth_key = models.CharField(max_length=255, unique=True, verbose_name="Clé d'API", blank=True)
     sso_url = models.URLField(max_length=255, verbose_name="URL de connexion SSO")
 
     # Nouveaux champs pour la gestion des partenaires
@@ -33,6 +37,20 @@ class Institution(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.auth_key:
+            self.auth_key = self.generate_auth_key()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_auth_key():
+        return secrets.token_urlsafe(32)
+
+    def clean(self):
+        super().clean()
+        if self.is_active and not self.sso_url:
+            raise ValidationError("Une URL de connexion SSO est requise pour une institution active.")
 
 class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher')

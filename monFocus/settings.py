@@ -140,6 +140,7 @@ REST_FRAMEWORK = {
     ],
 }
 
+SSO_SECRET_KEY = os.getenv('SSO_SECRET_KEY')
 
 # PINECONE
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')

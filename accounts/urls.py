@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .sso_views import InstitutionSSOView, SSOLoginView, institution_selection, fake_sso_endpoint
+from .sso_views import InstitutionSSOView, SSOLoginView, institution_selection, sso_callback
 
 app_name = 'accounts'
 urlpatterns = [
@@ -15,5 +15,5 @@ urlpatterns = [
     path('select-institution/', institution_selection, name='institution_selection'),
     path('api/sso/', InstitutionSSOView.as_view(), name='institution_sso'),
     path('sso-login/', SSOLoginView.as_view(), name='sso_login'),
-    path('fake-sso-endpoint/', fake_sso_endpoint, name='fake_sso_endpoint'),
+    path('sso-callback/', sso_callback, name='sso_callback'),
 ]
