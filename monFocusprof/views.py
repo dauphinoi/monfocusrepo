@@ -7,6 +7,17 @@ from django.conf import settings
 from accounts.models import Institution
 from .forms import InstitutionContactForm
 
+try:
+    from django.core.files.storage import get_storage_class
+except ImportError:
+    try:
+        from django.core.files.storage import storages
+        get_storage_class = storages.get_storage_class
+    except AttributeError:
+        from django.core.files.storage import Storage
+        def get_storage_class(import_path=None):
+            return Storage
+
 # Create your views here.
 
 def product_view(request):
@@ -17,6 +28,15 @@ def product_view(request):
 
 def index(request):
     partners = Institution.objects.filter(is_active=True, is_partner=True).order_by('partner_order', 'name')
+    
+    # Utiliser le stockage média pour obtenir les URLs des logos
+    MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)
+    media_storage = MediaStorage()
+    
+    for partner in partners:
+        if partner.logo:
+            partner.logo_url = media_storage.url(partner.logo.name)
+    
     return render(request, 'monFocusprof/index.html', {'partners': partners})
 
 

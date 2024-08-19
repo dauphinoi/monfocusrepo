@@ -7,6 +7,17 @@ from django.db import models
 import secrets
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.conf import settings
+try:
+    from django.core.files.storage import get_storage_class
+except ImportError:
+    try:
+        from django.core.files.storage import storages
+        get_storage_class = storages.get_storage_class
+    except AttributeError:
+        from django.core.files.storage import Storage
+        def get_storage_class(import_path=None):
+            return Storage
 
 class Institution(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nom")
@@ -24,7 +35,8 @@ class Institution(models.Model):
     sso_url = models.URLField(max_length=255, verbose_name="URL de connexion SSO")
 
     # Nouveaux champs pour la gestion des partenaires
-    logo = models.ImageField(upload_to='institution_logos/', blank=True, null=True, verbose_name="Logo")
+    logo = models.FileField(upload_to='institution_logos/', storage=get_storage_class(settings.DEFAULT_FILE_STORAGE)(), null=True, blank=True)
+    # logo = models.ImageField(upload_to='institution_logos/', blank=True, null=True, verbose_name="Logo")
     website = models.URLField(blank=True, verbose_name="Site web")
     description = models.TextField(blank=True, verbose_name="Description")
     is_partner = models.BooleanField(default=False, verbose_name="Est un partenaire")
@@ -41,6 +53,13 @@ class Institution(models.Model):
     def save(self, *args, **kwargs):
         if not self.auth_key:
             self.auth_key = self.generate_auth_key()
+        if self.logo:
+            storage = get_storage_class(settings.DEFAULT_FILE_STORAGE)()
+            filename = storage.save(
+                f"institution_logos/{self.name}/{self.logo.name}",
+                self.logo
+            )
+            self.logo.name = filename    
         super().save(*args, **kwargs)
 
     @staticmethod
