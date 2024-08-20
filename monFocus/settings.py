@@ -88,11 +88,8 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-# Configurations S3 et stockage
 if not DEBUG:
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')
-    AWS_S3_ADDRESSING_STYLE = 'virtual'
-    AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
@@ -100,18 +97,17 @@ if not DEBUG:
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
-    
-    # Définition des emplacements de stockage
+    AWS_DEFAULT_ACL = None
+    AWS_BUCKET_ACL = None
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+
     AWS_STATIC_LOCATION = 'static'
-    AWS_MEDIA_LOCATION = 'media'
-    
-    # Configuration pour les fichiers statiques
-    STATICFILES_STORAGE = 'monFocus.storage_backends.StaticStorage'
     STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_STATIC_LOCATION}/'
-    
-    # Configuration pour les fichiers média
-    DEFAULT_FILE_STORAGE = 'monFocus.storage_backends.MediaStorage'
+    STATICFILES_STORAGE = 'monFocus.storage_backends.StaticStorage'
+
+    AWS_MEDIA_LOCATION = 'media'
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_MEDIA_LOCATION}/'
+    DEFAULT_FILE_STORAGE = 'monFocus.storage_backends.MediaStorage'
 else:
     STATIC_URL = '/static/'
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

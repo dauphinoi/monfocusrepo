@@ -27,6 +27,11 @@ def product_view(request):
 #     return render(request, "monFocusprof/index.html")
 
 import logging
+from django.shortcuts import render
+from .models import Institution
+
+logger = logging.getLogger(__name__)
+
 def index(request):
     try:
         partners = Institution.objects.filter(is_active=True, is_partner=True).order_by('partner_order', 'name')
@@ -35,28 +40,6 @@ def index(request):
             if partner.logo:
                 try:
                     partner.logo_url = partner.logo.url
-                except Exception as e:
-                    logger.error(f"Erreur lors de la génération de l'URL du logo pour {partner.name}: {str(e)}")
-                    partner.logo_url = None
-        
-        return render(request, 'monFocusprof/index.html', {'partners': partners})
-    except Exception as e:
-        logger.error(f"Erreur dans la vue index: {str(e)}")
-        return render(request, 'monFocusprof/index.html', {'partners': [], 'error': "Une erreur s'est produite lors du chargement des partenaires."})
-
-logger = logging.getLogger(__name__)
-
-def index(request):
-    try:
-        partners = Institution.objects.filter(is_active=True, is_partner=True).order_by('partner_order', 'name')
-        
-        MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)
-        media_storage = MediaStorage()
-        
-        for partner in partners:
-            if partner.logo:
-                try:
-                    partner.logo_url = media_storage.url(partner.logo.name)
                 except Exception as e:
                     logger.error(f"Erreur lors de la génération de l'URL du logo pour {partner.name}: {str(e)}")
                     partner.logo_url = None
