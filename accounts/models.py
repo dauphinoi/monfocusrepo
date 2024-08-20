@@ -51,6 +51,8 @@ class Institution(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        if self.logo and not self.logo.name.startswith('institution_logos/'):
+            self.logo.name = f'institution_logos/{self.logo.name}'
         if not self.auth_key:
             self.auth_key = self.generate_auth_key()  
         super().save(*args, **kwargs)
