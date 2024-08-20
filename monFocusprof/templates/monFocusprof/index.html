@@ -130,19 +130,25 @@
 
 <div class="section partners-section">
     <h2>Nos partenaires</h2>
-    <div class="partners-carousel">
-        <div class="partners-track">
-            {% for partner in partners %}
-                <div class="partner-item">
-                    {% if partner.logo_url %}
-                        <img src="{{ partner.logo_url }}" alt="{{ partner.name }}" title="{{ partner.name }}">
-                    {% else %}
-                        {{ partner.name }}
-                    {% endif %}
-                </div>
-            {% endfor %}
+    {% if error %}
+        <p>{{ error }}</p>
+    {% else %}
+        <div class="partners-carousel">
+            <div class="partners-track">
+                {% for partner in partners %}
+                    <div class="partner-item">
+                        {% if partner.logo_url %}
+                            <img src="{{ partner.logo_url }}" alt="{{ partner.name }}" title="{{ partner.name }}">
+                        {% else %}
+                            <span>{{ partner.name }}</span>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <p>Aucun partenaire à afficher pour le moment.</p>
+                {% endfor %}
+            </div>
         </div>
-    </div>
+    {% endif %}
 </div>
 
 <script>

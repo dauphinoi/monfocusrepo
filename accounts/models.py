@@ -35,7 +35,7 @@ class Institution(models.Model):
     sso_url = models.URLField(max_length=255, verbose_name="URL de connexion SSO")
 
     # Nouveaux champs pour la gestion des partenaires
-    logo = models.FileField(upload_to='institution_logos/', storage=get_storage_class(settings.DEFAULT_FILE_STORAGE)(), null=True, blank=True)
+    logo = models.FileField(upload_to='institution_logos/', null=True, blank=True)
     # logo = models.ImageField(upload_to='institution_logos/', blank=True, null=True, verbose_name="Logo")
     website = models.URLField(blank=True, verbose_name="Site web")
     description = models.TextField(blank=True, verbose_name="Description")
@@ -52,15 +52,9 @@ class Institution(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.auth_key:
-            self.auth_key = self.generate_auth_key()
-        if self.logo:
-            storage = get_storage_class(settings.DEFAULT_FILE_STORAGE)()
-            filename = storage.save(
-                f"{self.logo.name}",
-                self.logo
-            )
-            self.logo.name = filename    
+            self.auth_key = self.generate_auth_key()  
         super().save(*args, **kwargs)
+
 
     @staticmethod
     def generate_auth_key():
