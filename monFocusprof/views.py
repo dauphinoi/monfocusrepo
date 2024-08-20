@@ -28,7 +28,6 @@ def product_view(request):
 
 import logging
 from django.shortcuts import render
-from .models import Institution
 
 logger = logging.getLogger(__name__)
 
