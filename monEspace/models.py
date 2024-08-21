@@ -39,6 +39,12 @@ class Attachment(models.Model):
             raise ValueError("Le fichier est obligatoire pour créer un attachement.")
         super().save(*args, **kwargs)
 
+    @property
+    def file_url(self):
+        if self.file:
+            return self.file.storage.url(self.file.name)
+        return None    
+
 class TodoItem(models.Model):
     course = models.ForeignKey(VisitorSubjectCourse, on_delete=models.CASCADE, related_name='todo_items')
     content = models.TextField()

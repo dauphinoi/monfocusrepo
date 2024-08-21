@@ -801,6 +801,7 @@ async function deleteNote(noteId) {
     }
 
     function handleAttachmentClick(attachment) {
+        console.log('Attachment clicked:', attachment.file);
         const mediaOverlay = document.getElementById('mediaOverlay');
         const mediaContent = document.getElementById('mediaContent');
         mediaContent.innerHTML = '';

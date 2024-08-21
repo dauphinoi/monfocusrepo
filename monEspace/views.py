@@ -343,11 +343,6 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Attachment.objects.none()
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({"request": self.request})
-        return context
-
     def get_queryset(self):
         user = self.request.user
         if hasattr(user, 'teacher'):
@@ -367,55 +362,44 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                 else:
                     note = Note.objects.get(id=note_id, user=user)
                 if note.user != self.request.user and not hasattr(user, 'teacher'):
-                    raise ValidationError({"error": "Vous ne pouvez ajouter des attachements qu'à vos propres notes."})
+                    raise ValidationError("Vous ne pouvez ajouter des attachements qu'à vos propres notes.")
 
             file = self.request.FILES.get('file')
             if file:
-                media_storage = MediaStorage()
-                file_name = f"{file_type}/{note_id}/{file.name}"
+                attachment = serializer.save(note_id=note_id, file_type=file_type, file=file)
                 
-                try:
-                    file_path = media_storage.save(file_name, file)
-                    file_url = media_storage.url(file_path)
-                    
-                    attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_url)
-                    
-                    if file_type == 'image':
-                        with media_storage.open(file_path, 'rb') as image_file:
+                if file_type == 'image':
+                    try:
+                        with attachment.file.open('rb') as image_file:
                             image_content = analyze_image_with_gpt4(image_file)
                         attachment.content = image_content
                         attachment.save()
-                    
-                    update_note_embedding(attachment.note)
-                    
-                    return {
-                        'id': attachment.id,
-                        'file': file_url,
-                        'file_type': attachment.file_type,
-                        'created_at': attachment.created_at.isoformat(),
-                        'note': attachment.note_id,
-                        'content': attachment.content if file_type == 'image' else None
-                    }
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'enregistrement ou de l'analyse du fichier: {str(e)}")
-                    raise ValidationError({"error": f"Erreur lors du traitement du fichier: {str(e)}"})
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'analyse de l'image: {str(e)}")
+                
+                update_note_embedding(attachment.note)
+                
+                return {
+                    'id': attachment.id,
+                    'file': attachment.file_url,
+                    'file_type': attachment.file_type,
+                    'created_at': attachment.created_at.isoformat(),
+                    'note': attachment.note_id,
+                    'content': attachment.content if file_type == 'image' else None
+                }
             else:
-                raise ValidationError({"error": "Aucun fichier n'a été fourni."})
+                raise ValidationError("Aucun fichier n'a été fourni.")
         except Exception as e:
             logger.error(f"Erreur lors de la création de l'attachement: {str(e)}")
-            raise ValidationError({"error": str(e)})
+            raise ValidationError(str(e))
 
-    def _get_next_page_number(self, note):
-        existing_attachments = Attachment.objects.filter(note=note, file_type='image')
-        return len(existing_attachments) + 1
-    
     def perform_update(self, serializer):
         attachment = serializer.save()
         
         if attachment.file_type == 'image' and 'file' in serializer.validated_data:
             try:
-                MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)()
-                image_content = analyze_image_with_gpt4(MediaStorage.open(attachment.file.name).name)
+                with attachment.file.open('rb') as image_file:
+                    image_content = analyze_image_with_gpt4(image_file)
                 attachment.content = image_content
                 attachment.save()
             except Exception as e:
@@ -449,7 +433,6 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
-
 
 
 
