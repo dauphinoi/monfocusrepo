@@ -386,7 +386,8 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                 
                 if file_type == 'image':
                     try:
-                        image_content = analyze_image_with_gpt4(media_storage.open(file_path).name)
+                        with media_storage.open(file_path) as f:
+                            image_content = analyze_image_with_gpt4(f)
                         attachment.content = image_content
                         attachment.save()
                     except Exception as e:
