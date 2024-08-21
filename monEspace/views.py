@@ -336,6 +336,8 @@ except ImportError:
             return Storage
 from django.core.files.base import ContentFile
 
+logger = logging.getLogger(__name__)
+
 class AttachmentViewSet(viewsets.ModelViewSet):
     serializer_class = AttachmentSerializer
     permission_classes = [IsAuthenticated]
@@ -369,34 +371,29 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
             file = self.request.FILES.get('file')
             if file:
-                # Utiliser le stockage média
-                MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)
-                media_storage = MediaStorage()
-
-                # Générer un nom de fichier unique
+                MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)()
                 file_name = f"{file_type}/{note_id}/{os.path.basename(file.name)}"
-                
-                # Lire le contenu du fichier
                 file_content = ContentFile(file.read())
                 
-                # Sauvegarder le fichier
-                file_path = media_storage.save(file_name, file_content)
+                try:
+                    file_path = MediaStorage.save(file_name, file_content)
+                    file_url = MediaStorage.url(file_path)
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'enregistrement du fichier: {str(e)}")
+                    raise ValidationError({"error": "Erreur lors de l'enregistrement du fichier."})
                 
-                # Obtenir l'URL du fichier
-                file_url = media_storage.url(file_path)
-                
-                # Créer l'attachement
                 attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
                 
-                # Analyse de l'image si c'est une imageð
                 if file_type == 'image':
-                    image_content = analyze_image_with_gpt4(media_storage.open(file_path).name)
-                    attachment.content = image_content
-                    attachment.save()
+                    try:
+                        image_content = analyze_image_with_gpt4(MediaStorage.open(file_path).name)
+                        attachment.content = image_content
+                        attachment.save()
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'analyse de l'image: {str(e)}")
                 
                 update_note_embedding(attachment.note)
                 
-                # Renvoyer les données de l'attachement
                 return {
                     'id': attachment.id,
                     'file': file_url,
@@ -410,7 +407,6 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Erreur lors de la création de l'attachement: {str(e)}")
             raise ValidationError({"error": str(e)})
-    
 
     def _get_next_page_number(self, note):
         existing_attachments = Attachment.objects.filter(note=note, file_type='image')
@@ -419,11 +415,14 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         attachment = serializer.save()
         
-        # Ré-analyser l'image si c'est une image et que le fichier a été mis à jour
         if attachment.file_type == 'image' and 'file' in serializer.validated_data:
-            image_content = analyze_image_with_gpt4(attachment.file.path)
-            attachment.content = image_content
-            attachment.save()
+            try:
+                MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)()
+                image_content = analyze_image_with_gpt4(MediaStorage.open(attachment.file.name).name)
+                attachment.content = image_content
+                attachment.save()
+            except Exception as e:
+                logger.error(f"Erreur lors de la mise à jour de l'analyse de l'image: {str(e)}")
         
         update_note_embedding(attachment.note)
 
@@ -450,8 +449,6 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         self.perform_update(serializer)
 
         if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
