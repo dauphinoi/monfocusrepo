@@ -378,7 +378,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                     file_path = media_storage.save(file_name, file)
                     file_url = media_storage.url(file_path)
                     
-                    attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
+                    attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_url)
                     
                     if file_type == 'image':
                         with media_storage.open(file_path, 'rb') as image_file:
