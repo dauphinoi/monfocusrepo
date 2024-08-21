@@ -335,7 +335,7 @@ except ImportError:
         def get_storage_class(import_path=None):
             return Storage
 from django.core.files.base import ContentFile
-
+from monFocus.storage_backends import MediaStorage
 logger = logging.getLogger(__name__)
 
 class AttachmentViewSet(viewsets.ModelViewSet):
@@ -371,22 +371,22 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
             file = self.request.FILES.get('file')
             if file:
-                MediaStorage = get_storage_class(settings.DEFAULT_FILE_STORAGE)()
+                media_storage = MediaStorage()
                 file_name = f"{file_type}/{note_id}/{os.path.basename(file.name)}"
                 file_content = ContentFile(file.read())
                 
                 try:
-                    file_path = MediaStorage.save(file_name, file_content)
-                    file_url = MediaStorage.url(file_path)
+                    file_path = media_storage.save(file_name, file_content)
+                    file_url = media_storage.url(file_path)
                 except Exception as e:
                     logger.error(f"Erreur lors de l'enregistrement du fichier: {str(e)}")
-                    raise ValidationError({"error": "Erreur lors de l'enregistrement du fichier."})
+                    raise ValidationError({"error": f"Erreur lors de l'enregistrement du fichier: {str(e)}"})
                 
                 attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
                 
                 if file_type == 'image':
                     try:
-                        image_content = analyze_image_with_gpt4(MediaStorage.open(file_path).name)
+                        image_content = analyze_image_with_gpt4(media_storage.open(file_path).name)
                         attachment.content = image_content
                         attachment.save()
                     except Exception as e:
