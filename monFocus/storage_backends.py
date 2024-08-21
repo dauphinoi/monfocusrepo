@@ -6,7 +6,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 class MediaStorage(S3Boto3Storage):
-    location = settings.AWS_MEDIA_LOCATION
+    location = 'media'
     default_acl = None  # Désactive l'utilisation des ACLs
     file_overwrite = False
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
@@ -34,7 +34,7 @@ class MediaStorage(S3Boto3Storage):
             return True
         except ClientError:
             return False
-
+    
     def url(self, name):
         return urljoin(f'https://{self.custom_domain}/', self._normalize_name(name))
 

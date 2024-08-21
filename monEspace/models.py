@@ -24,9 +24,15 @@ class Note(models.Model):
     def __str__(self):
         return self.title
 
+
+from monFocus.storage_backends import MediaStorage
+from django.conf import settings
+def attachment_file_path(instance, filename):
+    # Utilise le note_id comme dossier
+    return f'media/image/{instance.note.id}/{filename}'
 class Attachment(models.Model):
     note = models.ForeignKey(Note, related_name='attachments', on_delete=models.CASCADE)
-    file = models.FileField(upload_to='attachments/')
+    file = models.FileField(upload_to=attachment_file_path, storage=MediaStorage())
     file_type = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     content = models.TextField(blank=True, null=True)  # Pour stocker la description de l'image
@@ -42,8 +48,8 @@ class Attachment(models.Model):
     @property
     def file_url(self):
         if self.file:
-            return self.file.storage.url(self.file.name)
-        return None    
+            return f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{self.file.name}"
+        return None 
 
 class TodoItem(models.Model):
     course = models.ForeignKey(VisitorSubjectCourse, on_delete=models.CASCADE, related_name='todo_items')

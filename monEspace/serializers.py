@@ -16,16 +16,15 @@ class TodoItemSerializer(serializers.ModelSerializer):
 class AttachmentSerializer(serializers.ModelSerializer):
     note = serializers.PrimaryKeyRelatedField(queryset=Note.objects.all(), required=False)
     file_type = serializers.CharField(required=False)
+    file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Attachment
-        fields = ['id', 'file', 'file_type', 'created_at', 'note']
+        fields = ['id', 'file', 'file_type', 'created_at', 'note', 'file_url']
+        read_only_fields = ['file_url']
 
     def get_file_url(self, obj):
-        request = self.context.get('request')
-        if obj.file and hasattr(obj.file, 'url'):
-            return request.build_absolute_uri(obj.file.url) if request else obj.file.url
-        return None
+        return obj.file_url
 
     def create(self, validated_data):
         request = self.context['request']
