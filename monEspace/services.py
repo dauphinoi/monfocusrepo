@@ -1,6 +1,4 @@
-import numpy as np
 from sentence_transformers import SentenceTransformer
-import faiss
 from .models import Note
 import re
 from nltk.corpus import stopwords
