@@ -372,37 +372,33 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             file = self.request.FILES.get('file')
             if file:
                 media_storage = MediaStorage()
-                file_name = f"{file_type}/{note_id}/{os.path.basename(file.name)}"
-                file_content = ContentFile(file.read())
+                file_name = f"{file_type}/{note_id}/{file.name}"
                 
                 try:
-                    file_path = media_storage.save(file_name, file_content)
+                    file_path = media_storage.save(file_name, file)
                     file_url = media_storage.url(file_path)
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'enregistrement du fichier: {str(e)}")
-                    raise ValidationError({"error": f"Erreur lors de l'enregistrement du fichier: {str(e)}"})
-                
-                attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
-                
-                if file_type == 'image':
-                    try:
-                        with media_storage.open(file_path) as f:
-                            image_content = analyze_image_with_gpt4(f)
+                    
+                    attachment = serializer.save(note_id=note_id, file_type=file_type, file=file_path)
+                    
+                    if file_type == 'image':
+                        with media_storage.open(file_path, 'rb') as image_file:
+                            image_content = analyze_image_with_gpt4(image_file)
                         attachment.content = image_content
                         attachment.save()
-                    except Exception as e:
-                        logger.error(f"Erreur lors de l'analyse de l'image: {str(e)}")
-                
-                update_note_embedding(attachment.note)
-                
-                return {
-                    'id': attachment.id,
-                    'file': file_url,
-                    'file_type': attachment.file_type,
-                    'created_at': attachment.created_at.isoformat(),
-                    'note': attachment.note_id,
-                    'content': attachment.content if file_type == 'image' else None
-                }
+                    
+                    update_note_embedding(attachment.note)
+                    
+                    return {
+                        'id': attachment.id,
+                        'file': file_url,
+                        'file_type': attachment.file_type,
+                        'created_at': attachment.created_at.isoformat(),
+                        'note': attachment.note_id,
+                        'content': attachment.content if file_type == 'image' else None
+                    }
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'enregistrement ou de l'analyse du fichier: {str(e)}")
+                    raise ValidationError({"error": f"Erreur lors du traitement du fichier: {str(e)}"})
             else:
                 raise ValidationError({"error": "Aucun fichier n'a été fourni."})
         except Exception as e:
