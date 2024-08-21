@@ -7,8 +7,10 @@ from botocore.exceptions import ClientError
 
 class MediaStorage(S3Boto3Storage):
     location = settings.AWS_MEDIA_LOCATION
-    default_acl = 'public-read'
+    default_acl = None  # Désactive l'utilisation des ACLs
     file_overwrite = False
+    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+    custom_domain = settings.AWS_S3_CUSTOM_DOMAIN
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -18,37 +20,15 @@ class MediaStorage(S3Boto3Storage):
                                    region_name=settings.AWS_S3_REGION_NAME)
 
     def _clean_name(self, name):
-        """
-        Cleans the name so that Windows style paths work
-        """
-        # Normalize Windows style paths
-        clean_name = posixpath.normpath(name).replace('\\', '/')
-
-        # os.path.normpath() can strip trailing slashes so we implement
-        # a workaround here.
-        if name.endswith('/') and not clean_name.endswith('/'):
-            # Add a trailing slash as it was stripped.
-            clean_name += '/'
-        return clean_name
+        return posixpath.normpath(name).replace('\\', '/')
 
     def _normalize_name(self, name):
-        """
-        Normalizes the name so that paths like /path/to/ignored/../foo.txt
-        work. We check to make sure that the path pointed to is not outside
-        the directory specified by the LOCATION setting.
-        """
-        base_path = self.location
-        base_path = base_path.rstrip('/')
-
-        final_path = posixpath.normpath(posixpath.join(base_path, name))
-        base_path_len = len(base_path)
-        if (not final_path.startswith(base_path) or
-                final_path[base_path_len:base_path_len + 1] not in ('', '/')):
-            raise ValueError("Attempted access to '%s' denied." % name)
-        return final_path.lstrip('/')
+        base_path = self.location.rstrip('/')
+        name = self._clean_name(name)
+        return posixpath.normpath(posixpath.join(base_path, name)).lstrip('/')
 
     def exists(self, name):
-        name = self._normalize_name(self._clean_name(name))
+        name = self._normalize_name(name)
         try:
             self.client.head_object(Bucket=self.bucket_name, Key=name)
             return True
@@ -56,10 +36,10 @@ class MediaStorage(S3Boto3Storage):
             return False
 
     def url(self, name):
-        return urljoin(settings.MEDIA_URL, name)
+        return urljoin(f'https://{self.custom_domain}/', self._normalize_name(name))
 
     def size(self, name):
-        name = self._normalize_name(self._clean_name(name))
+        name = self._normalize_name(name)
         try:
             response = self.client.head_object(Bucket=self.bucket_name, Key=name)
             return response['ContentLength']
@@ -67,7 +47,7 @@ class MediaStorage(S3Boto3Storage):
             raise ValueError("File not found")
 
     def get_modified_time(self, name):
-        name = self._normalize_name(self._clean_name(name))
+        name = self._normalize_name(name)
         try:
             response = self.client.head_object(Bucket=self.bucket_name, Key=name)
             return response['LastModified']
@@ -75,13 +55,11 @@ class MediaStorage(S3Boto3Storage):
             raise ValueError("File not found")
 
     get_created_time = get_modified_time
-
-    def get_accessed_time(self, name):
-        return self.get_modified_time(name)
+    get_accessed_time = get_modified_time
 
     def path(self, name):
         return None
 
 class StaticStorage(S3Boto3Storage):
     location = settings.AWS_STATIC_LOCATION
-    default_acl = 'public-read'
+    default_acl = None  # Désactive l'utilisation des ACLs
