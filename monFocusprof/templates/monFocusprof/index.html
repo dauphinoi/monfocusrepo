@@ -152,6 +152,15 @@
 </div>
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ... (le code existant pour l'animation du carrousel) ...
+
+        // Ajout du code pour logger les URL des images dans la console
+        const partnerImages = document.querySelectorAll('.partner-item img');
+        partnerImages.forEach(img => {
+            console.log(`Partenaire: ${img.dataset.partnerName}, URL du logo: ${img.src}`);
+        });
+    });
     const messages = [
         "L'éducation à l'ère de l'IA",
         "Un apprentissage qui s'adapte à vous",
