@@ -14,7 +14,7 @@ from pinecone import Pinecone
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-nltk.download('punkt')
+nltk.download('punkt_tab')
 nltk.download('stopwords')
 
 load_dotenv()
