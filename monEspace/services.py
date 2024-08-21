@@ -106,10 +106,14 @@ def semantic_search(query, user):
     return sorted(results, key=lambda x: x['score'], reverse=True)
 
 def analyze_image_with_gpt4(image_path):
-    with default_storage.open(image_path, 'rb') as image_file:
-        encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-
     try:
+        # Ouvrir le fichier en mode binaire
+        with default_storage.open(image_path, 'rb') as image_file:
+            # Lire le contenu du fichier
+            image_content = image_file.read()
+            # Encoder le contenu en base64
+            encoded_image = base64.b64encode(image_content).decode('utf-8')
+
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
