@@ -313,7 +313,7 @@ async function deleteNote(noteId) {
                         attachment.file_type === 'audio' ? '🎵' : 
                         '📎'}
                     </span>
-                    ${attachment.file.split('/').pop()}
+                    ${attachment.file}
                 `;
                 button.addEventListener('click', () => handleAttachmentClick(attachment));
                 attachmentsContainer.appendChild(button);
