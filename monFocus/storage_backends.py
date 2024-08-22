@@ -6,7 +6,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 class MediaStorage(S3Boto3Storage):
-    location = 'media'
+    location = ''
     default_acl = None  # Désactive l'utilisation des ACLs
     file_overwrite = False
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME

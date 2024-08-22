@@ -378,6 +378,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                         logger.error(f"Erreur lors de l'analyse de l'image: {str(e)}")
                 
                 update_note_embedding(attachment.note)
+                print(f"Attachment created: {attachment.file_url}")
                 
                 return {
                     'id': attachment.id,
