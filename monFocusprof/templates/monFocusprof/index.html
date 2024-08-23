@@ -1,110 +1,142 @@
 {% extends 'monFocusprof/base.html' %}
+{% load static %}
 {% block title %}Accueil monFocus{% endblock %}
 {% block content %}
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
-    
-    body, html {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
 
-    .typing-effect {
-        font-family: 'Caveat', cursive;
-        font-size: 36px;
-        font-weight: 700;
-        color: white;
-        padding: 30px 0;
-        text-align: center;
-        height: 40px; /* Hauteur fixe pour éviter le glissement */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
 
-    .cursor {
-        display: inline-block;
-        width: 3px;
-        height: 36px;
-        background-color: #0000ffde;
-        margin-left: 4px;
-        vertical-align: middle;
-    }
+.typing-effect {
+    font-family: 'Caveat', cursive;
+    font-size: 36px;
+    font-weight: 700;
+    color: white;
+    padding: 30px 0;
+    text-align: center;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-    .partners-section {
-        padding: 60px 0;
-        background: linear-gradient(135deg, #1a237e 0%, #7c4dff 100%);
-        overflow: hidden;
-    }
+.cursor {
+    display: inline-block;
+    width: 3px;
+    height: 36px;
+    background-color: #0000ffde;
+    margin-left: 4px;
+    vertical-align: middle;
+}
 
-    .partners-section h2 {
-        text-align: center;
-        font-size: 2.5rem;
-        color: #ffffff; /* Changé en blanc pour une meilleure lisibilité sur le fond foncé */
-        margin-bottom: 40px;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
+.page-content {
+    background: linear-gradient(135deg, #1a237e 0%, #7c4dff 100%);
+}
 
+.partners-section {
+    position: relative;
+    padding: 60px 0;
+    overflow: hidden;
+}
+
+.partners-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+}
+
+.partners-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255, 0.7) 100%);
+    z-index: 2;
+}
+
+.partners-content {
+    position: relative;
+    z-index: 3;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;    
+}
+
+.partners-section h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    color: #ffffff;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.partners-carousel {
+    position: relative;
+    overflow: hidden;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.partners-track {
+    display: flex;
+    position: absolute;
+    left: 0;
+    top: 0;
+    transition: transform 0.5s ease;
+}
+
+.partner-item {
+    flex: 0 0 200px;
+    height: 100px;
+    margin-right: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.partner-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+    filter: brightness(0) invert(1);
+}
+
+.partner-item:hover img {
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
     .partners-carousel {
-        position: relative;
-        overflow: hidden;
-        height: 120px;
-        margin: 0 auto;
-        max-width: 1200px;
-    }
-
-    .partners-track {
-        display: flex;
-        position: absolute;
-        left: 0;
-        top: 0;
-    }
-
-    .partner-item {
-        flex: 0 0 200px;
         height: 100px;
-        margin-right: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
+    .partner-item {
+        flex: 0 0 150px;
+        margin-right: 30px;
+    }
+}
 
-    .partner-item img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-        transition: transform 0.3s ease;
+@media (max-width: 480px) {
+    .partners-carousel {
+        height: 80px;
     }
-
-    .partner-item:hover img {
-        transform: scale(1.1);
+    .partner-item {
+        flex: 0 0 120px;
+        margin-right: 20px;
     }
-
-    @media (max-width: 768px) {
-        .partners-carousel {
-            height: 100px;
-        }
-        .partner-item {
-            flex: 0 0 150px;
-            margin-right: 30px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .partners-carousel {
-            height: 80px;
-        }
-        .partner-item {
-            flex: 0 0 120px;
-            margin-right: 20px;
-        }
-    }
-    .page-content {
-        background: linear-gradient(135deg, #1a237e 0%, #7c4dff 100%);
-    }
+}
 </style>
 
 <div class="hero">
@@ -132,26 +164,30 @@
 </div>
 
 <div class="section partners-section">
-    <h2>Nos partenaires</h2>
-    {% if error %}
-        <p>{{ error }}</p>
-    {% else %}
-        <div class="partners-carousel">
-            <div class="partners-track">
-                {% for partner in partners %}
-                    <div class="partner-item">
-                        {% if partner.logo_url %}
-                            <img src="{{ partner.logo_url }}" alt="{{ partner.name }}" title="{{ partner.name }}">
-                        {% else %}
-                            <span>{{ partner.name }}</span>
-                        {% endif %}
-                    </div>
-                {% empty %}
-                    <p>Aucun partenaire à afficher pour le moment.</p>
-                {% endfor %}
+    <div class="partners-background" style="background-image: url('{% static 'monFocusprof/images/backp2.jpeg' %}');"></div>
+    <div class="partners-overlay"></div>
+    <div class="partners-content">
+        <h2>Nos partenaires</h2>
+        {% if error %}
+            <p>{{ error }}</p>
+        {% else %}
+            <div class="partners-carousel">
+                <div class="partners-track">
+                    {% for partner in partners %}
+                        <div class="partner-item">
+                            {% if partner.logo_url %}
+                                <img src="{{ partner.logo_url }}" alt="{{ partner.name }}" title="{{ partner.name }}">
+                            {% else %}
+                                <span>{{ partner.name }}</span>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <p>Aucun partenaire à afficher pour le moment.</p>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
-    {% endif %}
+        {% endif %}
+    </div>
 </div>
 
 <script>

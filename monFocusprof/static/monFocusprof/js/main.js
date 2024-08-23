@@ -1,26 +1,14 @@
-// Script to change the header background color on scroll
-window.addEventListener('scroll', function() {
-    var header = document.getElementById('main-header');
-    var scrollPosition = window.scrollY;
-
-    if (scrollPosition > 50) {
-        header.style.backgroundColor = 'hsl(240, 100%, 25%)'; // Change to the desired background color
-        header.style.transition = 'background-color 0.3s'; // Smooth transition
-    } else {
-        header.style.backgroundColor = 'transparent'; // Initial transparent background
-    }
-});
-
 document.addEventListener('DOMContentLoaded', function() {
-    var renseignementLink = document.getElementById('renseignement-link');
+    const renseignementLink = document.getElementById('renseignement-link');
+    const currentPage = renseignementLink?.getAttribute('data-current-page');
+    
     if (renseignementLink) {
         renseignementLink.addEventListener('click', function(e) {
             e.preventDefault();
-            var currentPath = window.location.pathname;
             
-            if (currentPath !== '/') {
-                // Si on n'est pas sur la page d'accueil, rediriger
-                window.location.href = this.href;
+            if (currentPage !== 'index') {
+                // Si on n'est pas sur la page d'accueil, rediriger avec un paramètre
+                window.location.href = this.href + '?highlight=true';
             } else {
                 // Si on est déjà sur la page d'accueil, juste faire l'effet
                 highlightSection();
@@ -29,15 +17,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function highlightSection() {
-        var profileSection = document.getElementById('profile-section');
+        const profileSection = document.getElementById('profile-section');
         if (profileSection) {
+            // Scroll doux vers la section
+            profileSection.scrollIntoView({ behavior: 'smooth' });
+
             profileSection.style.transition = 'background-color 0.5s ease';
-            profileSection.style.backgroundColor = 'green'; // Couleur de mise en évidence
-            setTimeout(function() {
+            profileSection.style.backgroundColor = 'rgba(0, 255, 0, 0.2)'; // Vert semi-transparent
+            
+            setTimeout(() => {
                 profileSection.style.backgroundColor = ''; // Retour à la couleur originale
             }, 2000);
+        } else {
+            console.warn("La section 'profile-section' n'a pas été trouvée.");
         }
     }
+
+    // Vérifier si on vient d'arriver sur la page avec le paramètre highlight
+    if (currentPage === 'index' && new URLSearchParams(window.location.search).get('highlight') === 'true') {
+        highlightSection();
+        // Nettoyer l'URL
+        history.replaceState(null, '', window.location.pathname);
+    }
+});
 
     // Nouvelle partie pour la gestion du menu responsive
     const menuToggle = document.querySelector('.menu-toggle');
@@ -75,4 +77,3 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-

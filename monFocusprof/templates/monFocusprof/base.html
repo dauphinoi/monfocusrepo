@@ -110,6 +110,10 @@
         justify-content: center;
     }
 }
+
+#renseignement-link {
+    cursor: pointer;
+}
     </style>
 </head>
 <!-- Données structurées JSON-LD -->
@@ -147,7 +151,7 @@
         <nav>
             <div class="menu">
                 <a href="{% url 'index' %}">Accueil</a>
-                <a href="{% url 'index' %}" id="renseignement-link">Je me renseigne</a>
+                <a href="{% url 'index' %}" id="renseignement-link" data-current-page="{{ request.resolver_match.url_name }}">Je me renseigne</a>
                 <div class="dropdown">
                     <a href="#">Nos offres</a>
                     <div class="dropdown-content">
@@ -237,6 +241,19 @@ document.addEventListener('DOMContentLoaded', function() {
     closeBtn.addEventListener('click', function() {
         successModal.style.display = 'none';
     });
+});
+
+// Script to change the header background color on scroll
+window.addEventListener('scroll', function() {
+    var header = document.getElementById('main-header');
+    var scrollPosition = window.scrollY;
+
+    if (scrollPosition > 50) {
+        header.style.backgroundColor = 'hsl(240, 100%, 25%)'; // Change to the desired background color
+        header.style.transition = 'background-color 0.3s'; // Smooth transition
+    } else {
+        header.style.backgroundColor = 'transparent'; // Initial transparent background
+    }
 });
     </script> 
 </body>

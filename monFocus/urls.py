@@ -15,7 +15,6 @@ router.register(r'todo-items', TodoItemViewSet, basename='todo-item')
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("monFocusprof/", include("monFocusprof.urls")),
     path("accounts/", include("accounts.urls", namespace="accounts")),
     path('monespace/', include('monEspace.urls', namespace='monEspace')),
     path("api/", include(router.urls)),
