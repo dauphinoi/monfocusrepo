@@ -111,11 +111,13 @@ body, html {
     max-height: 100%;
     object-fit: contain;
     transition: transform 0.3s ease;
-    filter: brightness(0) invert(1);
 }
 
 .partner-item:hover img {
     transform: scale(1.1);
+}
+.partner-item img {
+    filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.3));
 }
 
 @media (max-width: 768px) {
