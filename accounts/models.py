@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 
 from django.db import models
-
+from monFocus.storage_backends import MediaStorage
 import secrets
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -19,6 +19,10 @@ except ImportError:
         def get_storage_class(import_path=None):
             return Storage
 
+
+def institution_logo_path(instance, filename):
+    # Utilise le note_id comme dossier
+    return f'media/institution_logos/institution_logos/{filename}'
 class Institution(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nom")
     type = models.CharField(max_length=50, choices=[
@@ -35,7 +39,7 @@ class Institution(models.Model):
     sso_url = models.URLField(max_length=255, verbose_name="URL de connexion SSO")
 
     # Nouveaux champs pour la gestion des partenaires
-    logo = models.FileField(upload_to='institution_logos/', null=True, blank=True)
+    logo = models.FileField(upload_to= institution_logo_path, null=True, blank=True, storage=MediaStorage())
     # logo = models.ImageField(upload_to='institution_logos/', blank=True, null=True, verbose_name="Logo")
     website = models.URLField(blank=True, verbose_name="Site web")
     description = models.TextField(blank=True, verbose_name="Description")
@@ -51,11 +55,15 @@ class Institution(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        if self.logo and not self.logo.name.startswith('institution_logos/'):
-            self.logo.name = f'institution_logos/{self.logo.name}'
         if not self.auth_key:
             self.auth_key = self.generate_auth_key()  
         super().save(*args, **kwargs)
+
+    @property
+    def logo_url(self):
+        if self.logo:
+            return f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{self.logo.name}"
+        return None    
 
 
     @staticmethod

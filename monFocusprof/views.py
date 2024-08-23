@@ -35,13 +35,7 @@ def index(request):
     try:
         partners = Institution.objects.filter(is_active=True, is_partner=True).order_by('partner_order', 'name')
         
-        for partner in partners:
-            if partner.logo:
-                try:
-                    partner.logo_url = partner.logo.url
-                except Exception as e:
-                    logger.error(f"Erreur lors de la génération de l'URL du logo pour {partner.name}: {str(e)}")
-                    partner.logo_url = None
+        # Pas besoin de boucle pour logo_url, c'est une propriété calculée
         
         return render(request, 'monFocusprof/index.html', {'partners': partners})
     except Exception as e:
