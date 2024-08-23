@@ -141,7 +141,7 @@
     {% block header %}
     <header id="main-header">
         <div class="logo">
-            <img src="{% static 'monFocusprof/images/lllo.svg' %}" alt="monFocusprof">
+            <img src="{% static 'monFocusprof/images/logo1.svg' %}" alt="monFocus">
             <span>monFocus</span>
         </div>
         <nav>
@@ -166,12 +166,12 @@
     {% block content %}
     {% endblock %}
     
-    <script src="{% static 'monFocusprof/js/main.js' %}?v=1.0"></script>
+    <script src="{% static 'monFocusprof/js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
     <footer class="footer">
         <div class="footer-container">
             <div class="footer-logo">
-                <img src="{% static 'monFocusprof/images/lllo.svg' %}" alt="Logo">
+                <img src="{% static 'monFocusprof/images/logo1.svg' %}" alt="Logo">
                 <span>monFocus</span>
             </div>
             <div class="footer-section">
@@ -237,6 +237,17 @@ document.addEventListener('DOMContentLoaded', function() {
     closeBtn.addEventListener('click', function() {
         successModal.style.display = 'none';
     });
+});
+window.addEventListener('scroll', function() {
+    var header = document.getElementById('main-header');
+    var scrollPosition = window.scrollY;
+
+    if (scrollPosition > 50) {
+        header.style.backgroundColor = 'hsl(240, 100%, 25%)'; // Change to the desired background color
+        header.style.transition = 'background-color 0.3s'; // Smooth transition
+    } else {
+        header.style.backgroundColor = 'transparent'; // Initial transparent background
+    }
 });
     </script> 
 </body>

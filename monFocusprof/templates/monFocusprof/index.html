@@ -35,14 +35,14 @@
 
     .partners-section {
         padding: 60px 0;
-        background: linear-gradient(135deg, #f6f9fc 0%, #e9f2f9 100%);
+        background: linear-gradient(135deg, #1a237e 0%, #7c4dff 100%);
         overflow: hidden;
     }
 
     .partners-section h2 {
         text-align: center;
         font-size: 2.5rem;
-        color: #333;
+        color: #ffffff; /* Changé en blanc pour une meilleure lisibilité sur le fond foncé */
         margin-bottom: 40px;
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -102,6 +102,9 @@
             margin-right: 20px;
         }
     }
+    .page-content {
+        background: linear-gradient(135deg, #1a237e 0%, #7c4dff 100%);
+    }
 </style>
 
 <div class="hero">
@@ -152,15 +155,6 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // ... (le code existant pour l'animation du carrousel) ...
-
-        // Ajout du code pour logger les URL des images dans la console
-        const partnerImages = document.querySelectorAll('.partner-item img');
-        partnerImages.forEach(img => {
-            console.log(`Partenaire: ${img.dataset.partnerName}, URL du logo: ${img.src}`);
-        });
-    });
     const messages = [
         "L'éducation à l'ère de l'IA",
         "Un apprentissage qui s'adapte à vous",

@@ -4,7 +4,7 @@ window.addEventListener('scroll', function() {
     var scrollPosition = window.scrollY;
 
     if (scrollPosition > 50) {
-        header.style.backgroundColor = '#0000FF'; // Change to the desired background color
+        header.style.backgroundColor = 'hsl(240, 100%, 25%)'; // Change to the desired background color
         header.style.transition = 'background-color 0.3s'; // Smooth transition
     } else {
         header.style.backgroundColor = 'transparent'; // Initial transparent background
