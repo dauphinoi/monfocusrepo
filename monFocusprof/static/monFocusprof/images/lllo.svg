@@ -17,15 +17,71 @@
       <stop offset="0%" style="stop-color:#1a237e;stop-opacity:0.3" />
       <stop offset="100%" style="stop-color:#7c4dff;stop-opacity:0.3" />
     </linearGradient>
+    <linearGradient id="pageGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.3" />
+    </linearGradient>
   </defs>
 
   <!-- Fond noir -->
   <rect width="100%" height="100%" fill="black"/>
   
-  <!-- Livre en arrière-plan -->
+  <!-- Livre en arrière-plan avec effet de page tournante -->
   <g transform="translate(150, 150) scale(1.5) rotate(-10)">
+    <!-- Page de gauche (fixe) -->
     <path d="M0 50 Q50 0 100 50 L100 150 Q50 100 0 150 Z" fill="url(#bookGradient)"/>
+    
+    <!-- Page de droite (fixe) -->
     <path d="M100 50 Q150 0 200 50 L200 150 Q150 100 100 150 Z" fill="url(#bookGradient)" opacity="0.7"/>
+    
+    <!-- Page qui tourne -->
+    <g>
+      <animateTransform
+        attributeName="transform"
+        type="rotate"
+        values="0 100 100; 0 100 100; -180 100 100; -180 100 100"
+        keyTimes="0; 0.7; 0.9; 1"
+        dur="13s"
+        repeatCount="indefinite"
+      />
+      <!-- Face avant de la page -->
+      <path d="M100 50 Q150 0 200 50 L200 150 Q150 100 100 150 Z" fill="url(#pageGradient)">
+        <animate
+          attributeName="d"
+          values="M100 50 Q150 0 200 50 L200 150 Q150 100 100 150 Z;
+                  M100 50 Q150 0 200 50 L200 150 Q150 100 100 150 Z;
+                  M100 50 Q125 25 150 50 L150 150 Q125 125 100 150 Z;
+                  M100 50 Q100 50 100 50 L100 150 Q100 150 100 150 Z;
+                  M100 50 Q100 50 100 50 L100 150 Q100 150 100 150 Z"
+          keyTimes="0; 0.7; 0.8; 0.9; 1"
+          dur="13s"
+          repeatCount="indefinite"
+        />
+      </path>
+      <!-- Ombre de la page -->
+      <path d="M100 50 Q150 0 200 50 L200 150 Q150 100 100 150 Z" fill="rgba(0,0,0,0.2)">
+        <animate
+          attributeName="d"
+          values="M100 50 Q150 0 200 50 L200 150 Q150 100 100 150 Z;
+                  M100 50 Q150 0 200 50 L200 150 Q150 100 100 150 Z;
+                  M100 50 Q125 25 150 50 L150 150 Q125 125 100 150 Z;
+                  M100 50 Q100 50 100 50 L100 150 Q100 150 100 150 Z;
+                  M100 50 Q75 75 50 50 L50 150 Q75 125 100 150 Z;
+                  M100 50 Q50 0 0 50 L0 150 Q50 100 100 150 Z;
+                  M100 50 Q50 0 0 50 L0 150 Q50 100 100 150 Z"
+          keyTimes="0; 0.7; 0.8; 0.85; 0.9; 0.95; 1"
+          dur="13s"
+          repeatCount="indefinite"
+        />
+        <animate
+          attributeName="opacity"
+          values="0; 0; 0.2; 0.5; 0.2; 0; 0"
+          keyTimes="0; 0.7; 0.8; 0.85; 0.9; 0.95; 1"
+          dur="13s"
+          repeatCount="indefinite"
+        />
+      </path>
+    </g>
   </g>
   
   <!-- Cercle de base -->
