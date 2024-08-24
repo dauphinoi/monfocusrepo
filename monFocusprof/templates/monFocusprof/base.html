@@ -255,6 +255,37 @@ window.addEventListener('scroll', function() {
         header.style.backgroundColor = 'transparent'; // Initial transparent background
     }
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    var renseignementLink = document.getElementById('renseignement-link');
+    const currentPage = renseignementLink.getAttribute('data-current-page');
+    if (renseignementLink) {
+        renseignementLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            var currentPath = window.location.pathname;
+            
+            if (currentPath !== '/') {
+                // Si on n'est pas sur la page d'accueil, rediriger
+                window.location.href = this.href;
+                highlightSection();
+            } else {
+                // Si on est déjà sur la page d'accueil, juste faire l'effet
+                highlightSection();
+            }
+        });
+    }
+
+    function highlightSection() {
+        var profileSection = document.getElementById('profile-section');
+        if (true) {
+            profileSection.style.transition = 'background-color 0.5s ease';
+            profileSection.style.backgroundColor = 'green'; // Couleur de mise en évidence
+            setTimeout(function() {
+                profileSection.style.backgroundColor = ''; // Retour à la couleur originale
+            }, 4000);
+        }
+    }
+});
     </script> 
 </body>
 </html>

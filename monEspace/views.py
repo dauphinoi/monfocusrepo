@@ -366,6 +366,9 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
             file = self.request.FILES.get('file')
             if file:
+                # Renommer le fichier
+                new_filename = self.generate_new_filename(note, file)
+                file.name = new_filename
                 attachment = serializer.save(note_id=note_id, file_type=file_type, file=file)
                 
                 if file_type == 'image':
@@ -394,6 +397,17 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             logger.error(f"Erreur lors de la création de l'attachement: {str(e)}")
             raise ValidationError(str(e))
 
+    def generate_new_filename(self, note, file):
+        # Obtenir le nombre actuel d'attachements pour cette note
+        attachment_count = Attachment.objects.filter(note=note).count() + 1
+        
+        # Obtenir l'extension du fichier original
+        _, extension = os.path.splitext(file.name)
+        
+        # Générer le nouveau nom de fichier
+        new_filename = f"{note.title.replace(' ', '_')}_P{attachment_count}{extension}"
+        
+        return new_filename
     def perform_update(self, serializer):
         attachment = serializer.save()
         
