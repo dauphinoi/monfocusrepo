@@ -498,16 +498,33 @@
   margin-bottom: 5px;
 }
 
-.next-button, .prev-button {
+.next-button1, .prev-button1 {
   padding: 10px 20px;
-  background-color: #007bff;
+  background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255, 0.7) 100%);
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
 }
 
-.prev-button {
+#ajoutCours{
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255, 0.7) 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.prev-button1 {
+  padding: 10px 20px;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.prev-button1 {
   background-color: #6c757d;
   margin-right: 10px;
 }

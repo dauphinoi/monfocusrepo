@@ -58,27 +58,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupEventListeners() {
-
-        // 
-        document.getElementById('tasksTab').addEventListener('click', () => switchView('tasks'));
+    document.getElementById('addHomeworkForm').addEventListener('submit', handleAddHomeworkSubmit);
+        // Gestion des tâches et devoirs
+    document.getElementById('tasksTab').addEventListener('click', () => switchView('tasks'));
     document.getElementById('homeworkTab').addEventListener('click', () => switchView('homework'));
     document.getElementById('addHomeworkBtn').addEventListener('click', showAddHomeworkForm);
     document.getElementById('addHomeworkForm').addEventListener('submit', handleAddHomeworkSubmit);
-    document.getElementById('cancelAddHomework').addEventListener('click', () => {
-        document.getElementById('addHomeworkForm').style.display = 'none';
-        document.getElementById('homeworkContent').style.display = 'block';
-    });
+    document.getElementById('cancelAddHomework').addEventListener('click', backToHomeworkView);
 
-    // Gestion des sous-onglets des devoirs
-    document.querySelectorAll('.sub-tab-button').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const tab = e.target.getAttribute('data-tab');
-            document.querySelectorAll('.sub-tab-button').forEach(btn => btn.classList.remove('active'));
-            e.target.classList.add('active');
-            document.getElementById('upcomingHomework').style.display = tab === 'upcoming' ? 'block' : 'none';
-            document.getElementById('pastHomework').style.display = tab === 'past' ? 'block' : 'none';
-        });
-    });
+     // Gestion des sous-onglets des devoirs
+     document.querySelector('[data-tab="upcoming"]').addEventListener('click', showUpcomingHomework);
+     document.querySelector('[data-tab="past"]').addEventListener('click', showPastHomework);
         // Ajoutez ces nouveaux écouteurs
     resetPasswordBtn.addEventListener('click', function() {
         resetPasswordModal.style.display = 'block';
@@ -462,37 +452,89 @@ async function deleteNote(noteId) {
     }
 
     function toggleTodo() {
-        const todoSidebar = document.getElementById('todoSidebar');
-        if (todoSidebar.classList.contains('open')) {
-            todoSidebar.classList.remove('open');
-        } else {
-            todoSidebar.classList.add('open');
-            if (currentCourseId) {
-                fetchTodos(currentCourseId);
-                fetchHomework(currentCourseId);
-            }
+    const todoSidebar = document.getElementById('todoSidebar');
+    if (todoSidebar.style.display === 'none' || todoSidebar.style.display === '') {
+        todoSidebar.style.display = 'block';
+        todoSidebar.classList.add('open');
+        if (currentCourseId) {
+            fetchTodos(currentCourseId);
+            fetchHomework(currentCourseId);
         }
+    } else {
+        todoSidebar.style.display = 'none';
+        todoSidebar.classList.remove('open');
     }
+}
 
-    function switchView(view) {
-        currentView = view;
-        const tasksTab = document.getElementById('tasksTab');
-        const homeworkTab = document.getElementById('homeworkTab');
-        const todoContent = document.getElementById('todoContent');
-        const homeworkContent = document.getElementById('homeworkContent');
-    
-        if (view === 'tasks') {
-            tasksTab.classList.add('active');
-            homeworkTab.classList.remove('active');
-            todoContent.classList.add('active');
-            homeworkContent.classList.remove('active');
-        } else {
-            tasksTab.classList.remove('active');
-            homeworkTab.classList.add('active');
-            todoContent.classList.remove('active');
-            homeworkContent.classList.add('active');
-        }
+function switchView(view) {
+    currentView = view;
+    const tasksTab = document.getElementById('tasksTab');
+    const homeworkTab = document.getElementById('homeworkTab');
+    const todoContent = document.getElementById('todoContent');
+    const homeworkContent = document.getElementById('homeworkContent');
+    const addHomeworkForm = document.getElementById('addHomeworkForm');
+    const homeworkTabs = document.querySelector('.homework-tabs');
+    const addHomeworkBtn = document.getElementById('addHomeworkBtn');
+
+    if (view === 'tasks') {
+        tasksTab.classList.add('active');
+        homeworkTab.classList.remove('active');
+        todoContent.style.display = 'block';
+        homeworkContent.style.display = 'none';
+        addHomeworkForm.style.display = 'none';
+        homeworkTabs.style.display = 'none';
+        addHomeworkBtn.style.display = 'none';
+    } else if (view === 'homework') {
+        tasksTab.classList.remove('active');
+        homeworkTab.classList.add('active');
+        todoContent.style.display = 'none';
+        homeworkContent.style.display = 'block';
+        addHomeworkForm.style.display = 'none';
+        homeworkTabs.style.display = 'flex';
+        showUpcomingHomework();
+    } else if (view === 'addHomework') {
+        todoContent.style.display = 'none';
+        homeworkContent.style.display = 'none';
+        addHomeworkForm.style.display = 'block';
+        homeworkTabs.style.display = 'none';
+        addHomeworkBtn.style.display = 'none';
     }
+}
+
+// Ajoutez ces nouvelles fonctions pour gérer l'affichage des sous-onglets des devoirs
+function showUpcomingHomework() {
+    const upcomingTab = document.querySelector('[data-tab="upcoming"]');
+    const pastTab = document.querySelector('[data-tab="past"]');
+    const upcomingHomework = document.getElementById('upcomingHomework');
+    const pastHomework = document.getElementById('pastHomework');
+    const addHomeworkBtn = document.getElementById('addHomeworkBtn');
+
+    upcomingTab.classList.add('active');
+    pastTab.classList.remove('active');
+    upcomingHomework.style.display = 'block';
+    pastHomework.style.display = 'none';
+    addHomeworkBtn.style.display = 'block';
+
+    // Charger les devoirs à venir
+    fetchHomework(currentCourseId, 'upcoming');
+}
+
+function showPastHomework() {
+    const upcomingTab = document.querySelector('[data-tab="upcoming"]');
+    const pastTab = document.querySelector('[data-tab="past"]');
+    const upcomingHomework = document.getElementById('upcomingHomework');
+    const pastHomework = document.getElementById('pastHomework');
+    const addHomeworkBtn = document.getElementById('addHomeworkBtn');
+
+    upcomingTab.classList.remove('active');
+    pastTab.classList.add('active');
+    upcomingHomework.style.display = 'none';
+    pastHomework.style.display = 'block';
+    addHomeworkBtn.style.display = 'none';
+
+    // Charger les devoirs passés
+    fetchHomework(currentCourseId, 'past');
+}
 
     async function startNewChatSession() {
         try {
@@ -964,20 +1006,15 @@ async function deleteNote(noteId) {
         };
     }
 
-    // Ajoutez cette nouvelle fonction pour gérer la soumission du formulaire d'ajout de devoir
-async function handleAddHomeworkSubmit(event) {
+    async function handleAddHomeworkSubmit(event) {
     event.preventDefault();
     const title = document.getElementById('homeworkTitle').value;
     const description = document.getElementById('homeworkDescription').value;
     const dueDate = document.getElementById('homeworkDueDate').value;
     const courseId = document.getElementById('homeworkCourse').value;
-    const attachments = document.getElementById('homeworkAttachment').files;
-
-    // Ici, vous devriez ajouter la logique pour gérer les pièces jointes
-    // Par exemple, vous pourriez les uploader séparément et obtenir leurs URLs
 
     try {
-        const response = await fetch('/api/homework/', {
+        const response = await fetch('/api/homeworks/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -987,55 +1024,133 @@ async function handleAddHomeworkSubmit(event) {
                 title,
                 description,
                 due_date: dueDate,
-                course: courseId,
-                // Ajoutez ici les URLs des pièces jointes si nécessaire
-            }),
+                course: courseId
+            })
         });
 
         if (!response.ok) {
-            throw new Error('Erreur lors de l ajout du devoir');
+            throw new Error('Erreur lors de l\'ajout du devoir');
         }
 
         // Réinitialiser le formulaire et rafraîchir l'affichage
         event.target.reset();
-        document.getElementById('addHomeworkForm').style.display = 'none';
-        document.getElementById('homeworkContent').style.display = 'block';
-        await fetchHomework(currentCourseId);
+        switchView('homework');
+        await fetchHomework(courseId);
     } catch (error) {
-        console.error('Erreur lors de l ajout du devoir:', error);
-        alert('Une erreur est survenue lors de l ajout du devoir');
+        console.error('Erreur lors de l\'ajout du devoir:', error);
+        alert('Une erreur est survenue lors de l\'ajout du devoir');
     }
 }
 
-    // Ajoutez cette nouvelle fonction pour gérer l'affichage du formulaire d'ajout de devoir
-    function showAddHomeworkForm() {
-        document.getElementById('homeworkContent').style.display = 'none';
-        document.getElementById('addHomeworkForm').style.display = 'block';
+// Fonction pour afficher le formulaire d'ajout de devoir
+function showAddHomeworkForm() {
+    switchView('addHomework');
+}
+
+// Fonction pour revenir à la vue des devoirs
+function backToHomeworkView() {
+    switchView('homework');
+}
+
+// Fonction pour rendre les devoirs
+function renderHomework() {
+    const upcomingHomework = document.getElementById('upcomingHomework');
+    const pastHomework = document.getElementById('pastHomework');
+    upcomingHomework.innerHTML = '';
+    pastHomework.innerHTML = '';
+
+    const now = new Date();
+
+    currentHomework.forEach(hw => {
+        const li = document.createElement('li');
+        const dueDate = new Date(hw.due_date);
+        const isPast = dueDate < now;
+
+        li.innerHTML = `
+            <h4>${hw.title}</h4>
+            <p>Date limite: ${dueDate.toLocaleDateString()}</p>
+            <p>${hw.description || ''}</p>
+            ${isPast ? `
+                <div class="attachment-section">
+                    ${hw.attachments ? hw.attachments.map(att => `<p>Pièce jointe: ${att.filename}</p>`).join('') : ''}
+                    <input type="file" id="attachment-${hw.id}" class="attachment-input" multiple>
+                    <button class="upload-attachment" data-homework-id="${hw.id}">Ajouter des pièces jointes</button>
+                </div>
+            ` : ''}
+        `;
+
+        if (isPast) {
+            pastHomework.appendChild(li);
+        } else {
+            upcomingHomework.appendChild(li);
+        }
+    });
+
+    // Ajout des écouteurs d'événements pour les boutons d'upload de pièces jointes
+    document.querySelectorAll('.upload-attachment').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const homeworkId = e.target.getAttribute('data-homework-id');
+            uploadAttachment(homeworkId);
+        });
+    });
+}
+
+// Fonction pour uploader des pièces jointes
+async function uploadAttachment(homeworkId) {
+    const fileInput = document.getElementById(`attachment-${homeworkId}`);
+    const files = fileInput.files;
+
+    if (files.length === 0) {
+        alert('Veuillez sélectionner au moins un fichier à uploader.');
+        return;
     }
 
-    function renderHomework() {
-        const upcomingHomework = document.getElementById('upcomingHomework');
-        const pastHomework = document.getElementById('pastHomework');
-        upcomingHomework.innerHTML = '';
-        pastHomework.innerHTML = '';
-    
-        const now = new Date();
-    
-        currentHomework.forEach(hw => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <h4>${hw.title}</h4>
-                <p>Date limite: ${new Date(hw.due_date).toLocaleDateString()}</p>
-                <p>${hw.description || ''}</p>
-            `;
-    
-            if (new Date(hw.due_date) > now) {
-                upcomingHomework.appendChild(li);
-            } else {
-                pastHomework.appendChild(li);
-            }
-        });
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('attachments', files[i]);
     }
+
+    try {
+        const response = await fetch(`/api/homeworks/${homeworkId}/attachments/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Erreur lors de l\'upload des pièces jointes');
+        }
+
+        // Rafraîchir l'affichage des devoirs
+        await fetchHomework(currentCourseId);
+        alert('Pièces jointes uploadées avec succès');
+    } catch (error) {
+        console.error('Erreur lors de l\'upload des pièces jointes:', error);
+        alert('Une erreur est survenue lors de l\'upload des pièces jointes');
+    }
+}
+
+// Fonction pour récupérer les devoirs
+async function fetchHomework(courseId, status = 'all') {
+    try {
+        let url = `/api/homeworks/?course_id=${courseId}&include_attachments=true`;
+        if (status !== 'all') {
+            url += `&status=${status}`;
+        }
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Erreur lors de la récupération des devoirs');
+        }
+        currentHomework = await response.json();
+        renderHomework();
+        return currentHomework;
+    } catch (error) {
+        console.error('Erreur lors de la récupération des devoirs:', error);
+        return [];
+    }
+}
 
     async function fetchTodos(courseId) {
         try {
@@ -1333,12 +1448,12 @@ async function handleAddHomeworkSubmit(event) {
          step2.style.display = 'none';
      });
  
-     step1.querySelector('.next-button').addEventListener('click', () => {
+     step1.querySelector('.next-button1').addEventListener('click', () => {
          step1.style.display = 'none';
          step2.style.display = 'block';
      });
  
-     step2.querySelector('.prev-button').addEventListener('click', () => {
+     step2.querySelector('.prev-button1').addEventListener('click', () => {
          step2.style.display = 'none';
          step1.style.display = 'block';
      });
