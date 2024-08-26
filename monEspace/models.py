@@ -86,3 +86,34 @@ class ChatMessage(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     related_note = models.ForeignKey(Note, on_delete=models.SET_NULL, null=True, blank=True)
+
+# Gestion des Homeworks
+from django.utils import timezone
+
+class Homework(models.Model):
+    course = models.ForeignKey(VisitorSubjectCourse, on_delete=models.CASCADE, related_name='homeworks')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    due_date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_corrected = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return self.title
+
+    @property
+    def is_past_due(self):
+        return timezone.now() > self.due_date
+
+class HomeworkFeedback(models.Model):
+    homework = models.OneToOneField(Homework, on_delete=models.CASCADE, related_name='feedback')
+    content = models.TextField()
+    grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Feedback for {self.homework.title}"

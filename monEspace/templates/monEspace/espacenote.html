@@ -13,7 +13,6 @@
         const tinymceApiKey = "tt0v5khcsqrekvlsszd48e3dxdlfz1jxwrf4xbbq9iabp6ht";
         
     </script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
     let allNotes = [];
@@ -28,6 +27,7 @@
     let sidebarVisible = true;
     let currentAttachmentIndex = 0;
     let currentAttachments = [];
+    let currentView = 'tasks';
     const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
     const resetPasswordBtn = document.getElementById('resetPasswordBtn');
     const resetPasswordModal = document.getElementById('resetPasswordModal');
@@ -74,6 +74,17 @@
     }
 
     function setupEventListeners() {
+    document.getElementById('addHomeworkForm').addEventListener('submit', handleAddHomeworkSubmit);
+        // Gestion des tâches et devoirs
+    document.getElementById('tasksTab').addEventListener('click', () => switchView('tasks'));
+    document.getElementById('homeworkTab').addEventListener('click', () => switchView('homework'));
+    document.getElementById('addHomeworkBtn').addEventListener('click', showAddHomeworkForm);
+    document.getElementById('addHomeworkForm').addEventListener('submit', handleAddHomeworkSubmit);
+    document.getElementById('cancelAddHomework').addEventListener('click', backToHomeworkView);
+
+     // Gestion des sous-onglets des devoirs
+     document.querySelector('[data-tab="upcoming"]').addEventListener('click', showUpcomingHomework);
+     document.querySelector('[data-tab="past"]').addEventListener('click', showPastHomework);
         // Ajoutez ces nouveaux écouteurs
     resetPasswordBtn.addEventListener('click', function() {
         resetPasswordModal.style.display = 'block';
@@ -457,16 +468,89 @@ async function deleteNote(noteId) {
     }
 
     function toggleTodo() {
-        const todoSidebar = document.getElementById('todoSidebar');
-        if (todoSidebar.style.display === 'none') {
-            todoSidebar.style.display = 'block';
-            if (currentCourseId) {
-                renderTodos();
-            }
-        } else {
-            todoSidebar.style.display = 'none';
+    const todoSidebar = document.getElementById('todoSidebar');
+    if (todoSidebar.style.display === 'none' || todoSidebar.style.display === '') {
+        todoSidebar.style.display = 'block';
+        todoSidebar.classList.add('open');
+        if (currentCourseId) {
+            fetchTodos(currentCourseId);
+            fetchHomework(currentCourseId);
         }
+    } else {
+        todoSidebar.style.display = 'none';
+        todoSidebar.classList.remove('open');
     }
+}
+
+function switchView(view) {
+    currentView = view;
+    const tasksTab = document.getElementById('tasksTab');
+    const homeworkTab = document.getElementById('homeworkTab');
+    const todoContent = document.getElementById('todoContent');
+    const homeworkContent = document.getElementById('homeworkContent');
+    const addHomeworkForm = document.getElementById('addHomeworkForm');
+    const homeworkTabs = document.querySelector('.homework-tabs');
+    const addHomeworkBtn = document.getElementById('addHomeworkBtn');
+
+    if (view === 'tasks') {
+        tasksTab.classList.add('active');
+        homeworkTab.classList.remove('active');
+        todoContent.style.display = 'block';
+        homeworkContent.style.display = 'none';
+        addHomeworkForm.style.display = 'none';
+        homeworkTabs.style.display = 'none';
+        addHomeworkBtn.style.display = 'none';
+    } else if (view === 'homework') {
+        tasksTab.classList.remove('active');
+        homeworkTab.classList.add('active');
+        todoContent.style.display = 'none';
+        homeworkContent.style.display = 'block';
+        addHomeworkForm.style.display = 'none';
+        homeworkTabs.style.display = 'flex';
+        showUpcomingHomework();
+    } else if (view === 'addHomework') {
+        todoContent.style.display = 'none';
+        homeworkContent.style.display = 'none';
+        addHomeworkForm.style.display = 'block';
+        homeworkTabs.style.display = 'none';
+        addHomeworkBtn.style.display = 'none';
+    }
+}
+
+// Ajoutez ces nouvelles fonctions pour gérer l'affichage des sous-onglets des devoirs
+function showUpcomingHomework() {
+    const upcomingTab = document.querySelector('[data-tab="upcoming"]');
+    const pastTab = document.querySelector('[data-tab="past"]');
+    const upcomingHomework = document.getElementById('upcomingHomework');
+    const pastHomework = document.getElementById('pastHomework');
+    const addHomeworkBtn = document.getElementById('addHomeworkBtn');
+
+    upcomingTab.classList.add('active');
+    pastTab.classList.remove('active');
+    upcomingHomework.style.display = 'block';
+    pastHomework.style.display = 'none';
+    addHomeworkBtn.style.display = 'block';
+
+    // Charger les devoirs à venir
+    fetchHomework(currentCourseId, 'upcoming');
+}
+
+function showPastHomework() {
+    const upcomingTab = document.querySelector('[data-tab="upcoming"]');
+    const pastTab = document.querySelector('[data-tab="past"]');
+    const upcomingHomework = document.getElementById('upcomingHomework');
+    const pastHomework = document.getElementById('pastHomework');
+    const addHomeworkBtn = document.getElementById('addHomeworkBtn');
+
+    upcomingTab.classList.remove('active');
+    pastTab.classList.add('active');
+    upcomingHomework.style.display = 'none';
+    pastHomework.style.display = 'block';
+    addHomeworkBtn.style.display = 'none';
+
+    // Charger les devoirs passés
+    fetchHomework(currentCourseId, 'past');
+}
 
     async function startNewChatSession() {
         try {
@@ -937,6 +1021,152 @@ async function deleteNote(noteId) {
             timeout = setTimeout(later, wait);
         };
     }
+
+    async function handleAddHomeworkSubmit(event) {
+    event.preventDefault();
+    const title = document.getElementById('homeworkTitle').value;
+    const description = document.getElementById('homeworkDescription').value;
+    const dueDate = document.getElementById('homeworkDueDate').value;
+    const courseId = document.getElementById('homeworkCourse').value;
+
+    try {
+        const response = await fetch('/api/homeworks/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                title,
+                description,
+                due_date: dueDate,
+                course: courseId
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Erreur lors de l\'ajout du devoir');
+        }
+
+        // Réinitialiser le formulaire et rafraîchir l'affichage
+        event.target.reset();
+        switchView('homework');
+        await fetchHomework(courseId);
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout du devoir:', error);
+        alert('Une erreur est survenue lors de l\'ajout du devoir');
+    }
+}
+
+// Fonction pour afficher le formulaire d'ajout de devoir
+function showAddHomeworkForm() {
+    switchView('addHomework');
+}
+
+// Fonction pour revenir à la vue des devoirs
+function backToHomeworkView() {
+    switchView('homework');
+}
+
+// Fonction pour rendre les devoirs
+function renderHomework() {
+    const upcomingHomework = document.getElementById('upcomingHomework');
+    const pastHomework = document.getElementById('pastHomework');
+    upcomingHomework.innerHTML = '';
+    pastHomework.innerHTML = '';
+
+    const now = new Date();
+
+    currentHomework.forEach(hw => {
+        const li = document.createElement('li');
+        const dueDate = new Date(hw.due_date);
+        const isPast = dueDate < now;
+
+        li.innerHTML = `
+            <h4>${hw.title}</h4>
+            <p>Date limite: ${dueDate.toLocaleDateString()}</p>
+            <p>${hw.description || ''}</p>
+            ${isPast ? `
+                <div class="attachment-section">
+                    ${hw.attachments ? hw.attachments.map(att => `<p>Pièce jointe: ${att.filename}</p>`).join('') : ''}
+                    <input type="file" id="attachment-${hw.id}" class="attachment-input" multiple>
+                    <button class="upload-attachment" data-homework-id="${hw.id}">Ajouter des pièces jointes</button>
+                </div>
+            ` : ''}
+        `;
+
+        if (isPast) {
+            pastHomework.appendChild(li);
+        } else {
+            upcomingHomework.appendChild(li);
+        }
+    });
+
+    // Ajout des écouteurs d'événements pour les boutons d'upload de pièces jointes
+    document.querySelectorAll('.upload-attachment').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const homeworkId = e.target.getAttribute('data-homework-id');
+            uploadAttachment(homeworkId);
+        });
+    });
+}
+
+// Fonction pour uploader des pièces jointes
+async function uploadAttachment(homeworkId) {
+    const fileInput = document.getElementById(`attachment-${homeworkId}`);
+    const files = fileInput.files;
+
+    if (files.length === 0) {
+        alert('Veuillez sélectionner au moins un fichier à uploader.');
+        return;
+    }
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('attachments', files[i]);
+    }
+
+    try {
+        const response = await fetch(`/api/homeworks/${homeworkId}/attachments/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Erreur lors de l\'upload des pièces jointes');
+        }
+
+        // Rafraîchir l'affichage des devoirs
+        await fetchHomework(currentCourseId);
+        alert('Pièces jointes uploadées avec succès');
+    } catch (error) {
+        console.error('Erreur lors de l\'upload des pièces jointes:', error);
+        alert('Une erreur est survenue lors de l\'upload des pièces jointes');
+    }
+}
+
+// Fonction pour récupérer les devoirs
+async function fetchHomework(courseId, status = 'all') {
+    try {
+        let url = `/api/homeworks/?course_id=${courseId}&include_attachments=true`;
+        if (status !== 'all') {
+            url += `&status=${status}`;
+        }
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Erreur lors de la récupération des devoirs');
+        }
+        currentHomework = await response.json();
+        renderHomework();
+        return currentHomework;
+    } catch (error) {
+        console.error('Erreur lors de la récupération des devoirs:', error);
+        return [];
+    }
+}
 
     async function fetchTodos(courseId) {
         try {
@@ -1567,6 +1797,233 @@ async function deleteNote(noteId) {
     opacity: 0.5;
     pointer-events: none;
 }
+/* Styles pour la barre latérale des tâches et devoirs */
+.todo-sidebar {
+    width: 300px;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    background-color: #f8f9fa;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    z-index: 1000;
+    transition: right 0.3s ease-in-out;
+}
+
+.todo-sidebar.open {
+    right: 0;
+}
+
+.todo-sidebar h2 {
+    padding: 20px;
+    margin: 0;
+    background-color: #007bff;
+    color: white;
+}
+
+/* Styles pour les onglets */
+.tab-container {
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 10px 20px;
+    border: none;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.tab-button.active {
+    background-color: white;
+    border-bottom: 2px solid #007bff;
+    color: #007bff;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Styles pour les éléments de la liste */
+#todoList,
+.homework-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+#todoList li,
+.homework-list li {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.3s;
+}
+
+#todoList li:hover,
+.homework-list li:hover {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#todoList li {
+    display: flex;
+    align-items: center;
+}
+
+#todoList li input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+/* Styles spécifiques aux devoirs */
+.homework-tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+}
+
+.sub-tab-button {
+    flex: 1;
+    padding: 5px 10px;
+    border: none;
+    background-color: #e9ecef;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.sub-tab-button.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.homework-list li h4 {
+    margin-top: 0;
+    color: #007bff;
+}
+
+.homework-list li p {
+    margin: 5px 0;
+    font-size: 0.9em;
+}
+
+.add-button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-button:hover {
+    background-color: #218838;
+}
+
+/* Styles pour le formulaire d'ajout de devoir */
+.homework-form {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+    margin-left: 10px;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .todo-sidebar {
+        width: 100%;
+        right: -100%;
+    }
+
+    .todo-sidebar.open {
+        right: 0;
+    }
+}
+
+.attachment-section {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+.attachment-input {
+    margin-bottom: 10px;
+}
+
+.upload-attachment {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.upload-attachment:hover {
+    background-color: #218838;
+}
     </style>
 </head>
 <!-- Google tag (gtag.js) -->
@@ -1690,8 +2147,57 @@ async function deleteNote(noteId) {
     </div>    
 
     <div id="todoSidebar" class="todo-sidebar" style="display: none;">
-        <h2>To-Do List</h2>
-        <ul id="todoList"></ul>
+        <h2>Tâches et Devoirs</h2>
+        <div class="tab-container">
+            <button id="tasksTab" class="tab-button active">Tâches</button>
+            <button id="homeworkTab" class="tab-button">Devoirs</button>
+        </div>
+        
+        <div id="todoContent" class="tab-content active">
+            <h3>Liste des tâches</h3>
+            <ul id="todoList"></ul>
+        </div>
+        
+        <div id="homeworkContent" class="tab-content">
+            <div class="homework-tabs">
+                <button class="sub-tab-button active" data-tab="upcoming">À venir</button>
+                <button class="sub-tab-button" data-tab="past">Passés</button>
+            </div>
+            <div id="upcomingHomework" class="homework-list"></div>
+            <div id="pastHomework" class="homework-list" style="display: none;"></div>
+            <button id="addHomeworkBtn" class="add-button">Ajouter un devoir</button>
+        </div>
+    
+        <div id="addHomeworkForm" class="homework-form" style="display: none;">
+            <h3>Ajouter un devoir</h3>
+            <form>
+                <div class="form-group">
+                    <label for="homeworkCourse">Cours :</label>
+                    <select id="homeworkCourse" required>
+                        <option value="" disabled selected>Choisissez un cours</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}">{{ course.subject.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="homeworkTitle">Titre du devoir :</label>
+                    <input type="text" id="homeworkTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="homeworkDescription">Description :</label>
+                    <textarea id="homeworkDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="homeworkDueDate">Date limite :</label>
+                    <input type="date" id="homeworkDueDate" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Ajouter le devoir</button>
+                    <button type="button" class="btn-secondary" id="cancelAddHomework">Annuler</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div id="mediaOverlay" class="media-overlay" style="display: none;">

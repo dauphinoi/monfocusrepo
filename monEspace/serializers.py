@@ -1,7 +1,7 @@
 from accounts.models import VisitorSubjectCourse
 from rest_framework import serializers
 from django.conf import settings
-from .models import Note, Attachment, TodoItem
+from .models import Homework, HomeworkFeedback, Note, Attachment, TodoItem
 
 class TodoItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,3 +63,44 @@ class NoteSerializer(serializers.ModelSerializer):
             note.course = course
             note.save()
         return note
+
+#home work
+
+class HomeworkFeedbackSerializer(serializers.ModelSerializer):
+    created_by = serializers.ReadOnlyField(source='created_by.username')
+
+    class Meta:
+        model = HomeworkFeedback
+        fields = ['id', 'content', 'grade', 'created_at', 'updated_at', 'created_by']
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
+
+class HomeworkSerializer(serializers.ModelSerializer):
+    is_past_due = serializers.BooleanField(read_only=True)
+    feedback = HomeworkFeedbackSerializer(read_only=True)
+    course_name = serializers.CharField(source='course.subject.name', read_only=True)
+    created_by = serializers.ReadOnlyField(source='created_by.username')
+    
+    class Meta:
+        model = Homework
+        fields = ['id', 'course', 'course_name', 'title', 'description', 'due_date', 
+                  'created_at', 'updated_at', 'created_by', 'is_corrected', 
+                  'is_past_due', 'feedback']
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'is_past_due']
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return Homework.objects.create(**validated_data, created_by=user)
+
+class HomeworkListSerializer(serializers.ModelSerializer):
+    course_name = serializers.CharField(source='course.subject.name', read_only=True)
+
+    class Meta:
+        model = Homework
+        fields = ['id', 'course', 'course_name', 'title', 'due_date', 'is_corrected', 'is_past_due']
+
+class CourseHomeworkSerializer(serializers.ModelSerializer):
+    homeworks = HomeworkListSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = VisitorSubjectCourse
+        fields = ['id', 'subject', 'homeworks']

@@ -4,10 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let recentNotes = [];
     let selectedNote = null;
     let currentCourseId = null;
-    let chatMessages = [];
     let currentTodos = [];
     let totalHours = 0;
     let sidebarVisible = true;
+    let currentAttachmentIndex = 0;
+    let currentAttachments = [];
     const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
     const resetPasswordBtn = document.getElementById('resetPasswordBtn');
     const resetPasswordModal = document.getElementById('resetPasswordModal');
@@ -57,8 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initTinyMCE();
     fetchAllNotes();
     setupEventListeners();
-    handleResponsiveness(); // Ajoutez cette ligne
-
+    handleResponsiveness();
 
     function initTinyMCE() {
         tinymce.init({
@@ -94,28 +94,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupEventListeners() {
-         // Ajoutez ces nouveaux écouteurs
-    resetPasswordBtn.addEventListener('click', function() {
-        resetPasswordModal.style.display = 'block';
-    });
+        document.addEventListener('mousedown', handleOutsideClick);
+        resetPasswordBtn.addEventListener('click', function() {
+            resetPasswordModal.style.display = 'block';
+        });
 
-    cancelResetBtn.addEventListener('click', function() {
-        resetPasswordModal.style.display = 'none';
-    });
-
-    resetPasswordForm.addEventListener('submit', handleResetPasswordSubmit);
-
-    // Fermer le modal si on clique en dehors
-    window.addEventListener('click', function(event) {
-        if (event.target === resetPasswordModal) {
+        cancelResetBtn.addEventListener('click', function() {
             resetPasswordModal.style.display = 'none';
-        }
-    });
+        });
+
+        resetPasswordForm.addEventListener('submit', handleResetPasswordSubmit);
+
+        // Fermer le modal si on clique en dehors
+        window.addEventListener('click', function(event) {
+            if (event.target === resetPasswordModal) {
+                resetPasswordModal.style.display = 'none';
+            }
+        });
         toggleSidebarBtn.addEventListener('click', toggleSidebar);
         window.addEventListener('resize', handleResponsiveness);
         document.getElementById('newNoteBtn').addEventListener('click', createNewNote);
-        document.getElementById('searchBtn').addEventListener('click', toggleSearch);
-        document.getElementById('chatBtn').addEventListener('click', toggleChat);
         document.getElementById('todoBtn').addEventListener('click', () => {
             toggleTodo();
             renderHourDeclarationForm();
@@ -124,18 +122,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('addImageBtn').addEventListener('click', () => triggerFileInput('image'));
         document.getElementById('addVideoBtn').addEventListener('click', () => triggerFileInput('video'));
         document.getElementById('addAudioBtn').addEventListener('click', () => triggerFileInput('audio'));
-        document.getElementById('closeChatBtn').addEventListener('click', toggleChat);
-        document.getElementById('sendChatBtn').addEventListener('click', handleChatSubmit);
         document.getElementById('closeMediaBtn').addEventListener('click', closeMediaOverlay);
         document.getElementById('fileInput').addEventListener('change', handleFileUpload);
-        document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
         document.getElementById('courseViewBtn').addEventListener('click', showCourseView);
-        document.getElementById('chatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleChatSubmit();
-            }
-        });
         document.getElementById('addTodoBtn').addEventListener('click', () => {
             const todoInput = document.getElementById('newTodoInput');
             const content = todoInput.value.trim();
@@ -157,7 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
 
     async function handleResetPasswordSubmit(e) {
         e.preventDefault();
@@ -207,8 +195,6 @@ document.addEventListener('DOMContentLoaded', function() {
             mainContent.style.marginLeft = '0';
             toggleBtn.style.left = '10px';
         }
-    
-        // Ne modifiez pas directement la visibilité des éléments internes de la sidebar ici
     }
 
     function handleResponsiveness() {
@@ -267,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderNotes();
             updateCurrentCourseTitle(courseName);
             toggleView('notes');
-            fetchTodos(courseId);  // Ajout de cette ligne
+            fetchTodos(courseId);
         } catch (error) {
             console.error('Error fetching course notes:', error);
         }
@@ -321,6 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (attachments && attachments.length > 0) {
             attachments.forEach(attachment => {
                 const button = document.createElement('button');
+                const fileName = attachment.file.split('/').pop();
                 button.innerHTML = `
                     <span class="icon">
                         ${attachment.file_type === 'image' ? '🖼️' : 
@@ -328,11 +315,30 @@ document.addEventListener('DOMContentLoaded', function() {
                         attachment.file_type === 'audio' ? '🎵' : 
                         '📎'}
                     </span>
-                    ${attachment.file.split('/').pop()}
+                    ${fileName}
                 `;
-                button.addEventListener('click', () => handleAttachmentClick(attachment));
+                button.addEventListener('click', () => handleAttachmentClick(attachment, attachments));
                 attachmentsContainer.appendChild(button);
             });
+        }
+    }
+
+    function renderAttachment(attachment) {
+        const mediaContent = document.getElementById('mediaContent');
+        mediaContent.innerHTML = '';
+    
+        switch (attachment.file_type) {
+            case 'image':
+                mediaContent.innerHTML = `<img src="${attachment.file}" alt="Image">`;
+                break;
+            case 'video':
+                mediaContent.innerHTML = `<video controls src="${attachment.file}"></video>`;
+                break;
+            case 'audio':
+                mediaContent.innerHTML = `<audio controls src="${attachment.file}"></audio>`;
+                break;
+            default:
+                mediaContent.innerHTML = `<p>Fichier non pris en charge : ${attachment.file}</p>`;
         }
     }
 
@@ -429,18 +435,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function toggleSearch() {
-        const searchOverlay = document.getElementById('searchOverlay');
-        searchOverlay.style.display = searchOverlay.style.display === 'none' ? 'flex' : 'none';
+    function handleOutsideClick(event) {
+        const todoSidebar = document.getElementById('todoSidebar');
+        const toggleBtn = document.getElementById('todoBtn');
+
+        // Vérifiez si le clic est en dehors de l'overlay et n'est pas sur le bouton de bascule
+        if (!todoSidebar.contains(event.target) && event.target !== toggleBtn) {
+            closeTodoSidebar();
+        }
     }
 
-    function toggleChat() {
-        const chatOverlay = document.querySelector('.chat-overlay');
-        chatOverlay.style.display = chatOverlay.style.display === 'none' ? 'flex' : 'none';
-        if (chatOverlay.style.display === 'flex') {
-            renderChatMessages();
-        }
-    }    
+    function closeTodoSidebar() {
+        const todoSidebar = document.getElementById('todoSidebar');
+        todoSidebar.style.display = 'none';
+    }
 
     function toggleTodo() {
         const todoSidebar = document.getElementById('todoSidebar');
@@ -452,69 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderHourDeclarationForm();
             handleResponsiveness();
         } else {
-            todoSidebar.style.display = 'none';
-        }
-    }
-
-    async function handleChatSubmit() {
-        const chatInput = document.getElementById('chatInput');
-        const messageContent = chatInput.value.trim();
-        if (messageContent === '') return;
-    
-        const userMessage = { role: 'user', content: messageContent };
-        chatMessages.push(userMessage);
-        renderChatMessages();
-        
-        chatInput.value = '';
-        
-        try {
-            const response = await fetch('/api/chat/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: JSON.stringify({ message: messageContent }),
-            });
-            const data = await response.json();
-            const aiMessage = { role: 'ai', content: data.message, source: data.source };
-            chatMessages.push(aiMessage);
-            renderChatMessages();
-        } catch (error) {
-            console.error('Error submitting chat:', error);
-        }
-    }
-
-    function renderChatMessages() {
-        const chatMessagesContainer = document.getElementById('chatMessages');
-        chatMessagesContainer.innerHTML = '';
-        chatMessages.forEach((message) => {
-            const messageElement = document.createElement('div');
-            messageElement.className = `chat-message ${message.role}`;
-            messageElement.innerHTML = `
-                <div class="message-content">
-                    <p>${message.content}</p>
-                    ${message.source ? `<p class="source"><a href="#" data-note-id="${message.source}">Source</a></p>` : ''}
-                </div>
-            `;
-            if (message.source) {
-                const sourceLink = messageElement.querySelector('a[data-note-id]');
-                sourceLink.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const noteId = parseInt(this.getAttribute('data-note-id'), 10);
-                    selectNoteById(noteId);
-                });
-            }
-            chatMessagesContainer.appendChild(messageElement);
-        });
-        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-    }
-    
-    function selectNoteById(noteId) {
-        const note = allNotes.find(n => n.id === noteId);
-        if (note) {
-            fetchCourseNotes(note.course, '');
-            selectNote(note);
+            closeTodoSidebar();
         }
     }
 
@@ -527,12 +473,12 @@ document.addEventListener('DOMContentLoaded', function() {
     async function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
-
+    
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', file.type.split('/')[0]);
         formData.append('note_id', selectedNote.id);
-
+    
         try {
             const response = await fetch('/api/upload/', {
                 method: 'POST',
@@ -541,71 +487,74 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: formData,
             });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
             const data = await response.json();
-            const newAttachment = { type: file.type.split('/')[0], url: data.url, name: file.name };
-            selectedNote.attachments = [...(selectedNote.attachments || []), newAttachment];
-            renderAttachments(selectedNote.attachments);
+            if (data.id) {
+                const newAttachment = {
+                    id: data.id,
+                    file: data.file,
+                    file_type: data.file_type,
+                    created_at: data.created_at,
+                    note: data.note
+                };
+                selectedNote.attachments = [...(selectedNote.attachments || []), newAttachment];
+                renderAttachments(selectedNote.attachments);
+                updateNoteInList(selectedNote);
+                alert('Fichier uploadé avec succès!');
+            } else if (data.error) {
+                throw new Error(data.error);
+            } else {
+                throw new Error('Réponse inattendue du serveur');
+            }
         } catch (error) {
             console.error('Error uploading file:', error);
+            alert(`Erreur lors de l'upload du fichier : ${error.message}`);
         }
     }
 
-    function handleAttachmentClick(attachment) {
+    function handleAttachmentClick(attachment, attachments) {
         const mediaOverlay = document.getElementById('mediaOverlay');
         const mediaContent = document.getElementById('mediaContent');
         mediaContent.innerHTML = '';
     
-        switch (attachment.file_type) {
-            case 'image':
-                mediaContent.innerHTML = `<img src="${attachment.file}" alt="Image">`;
-                break;
-            case 'video':
-                mediaContent.innerHTML = `<video controls src="${attachment.file}"></video>`;
-                break;
-            case 'audio':
-                mediaContent.innerHTML = `<audio controls src="${attachment.file}"></audio>`;
-                break;
-            default:
-                mediaContent.innerHTML = `<p>Fichier non pris en charge : ${attachment.file}</p>`;
-        }
+        currentAttachments = attachments.filter(att => att.file_type === 'image');
+        currentAttachmentIndex = currentAttachments.findIndex(att => att.id === attachment.id);
     
+        renderAttachment(attachment);
         mediaOverlay.style.display = 'flex';
+        updateNavigationButtons();
     }
+
+    function updateNavigationButtons() {
+        const prevButton = document.getElementById('prevAttachment');
+        const nextButton = document.getElementById('nextAttachment');
+    
+        prevButton.style.display = currentAttachmentIndex > 0 ? 'block' : 'none';
+        nextButton.style.display = currentAttachmentIndex < currentAttachments.length - 1 ? 'block' : 'none';
+    }
+    
+    document.getElementById('prevAttachment').addEventListener('click', () => {
+        if (currentAttachmentIndex > 0) {
+            currentAttachmentIndex--;
+            renderAttachment(currentAttachments[currentAttachmentIndex]);
+            updateNavigationButtons();
+        }
+    });
+    
+    document.getElementById('nextAttachment').addEventListener('click', () => {
+        if (currentAttachmentIndex < currentAttachments.length - 1) {
+            currentAttachmentIndex++;
+            renderAttachment(currentAttachments[currentAttachmentIndex]);
+            updateNavigationButtons();
+        }
+    });
 
     function closeMediaOverlay() {
         document.getElementById('mediaOverlay').style.display = 'none';
-    }
-
-    async function handleSearch() {
-        const query = document.getElementById('searchInput').value;
-        if (query.length < 4) {
-            document.getElementById('searchResults').innerHTML = '';
-            return;
-        }
-        try {
-            const response = await fetch(`/api/notes/search/?q=${encodeURIComponent(query)}`);
-            const results = await response.json();
-            renderSearchResults(results);
-        } catch (error) {
-            console.error('Error searching:', error);
-        }
-    }
-
-    function renderSearchResults(results) {
-        const searchResultsContainer = document.getElementById('searchResults');
-        searchResultsContainer.innerHTML = '';
-        results.forEach(result => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <h4>${result.title}</h4>
-                <p>${result.content_preview}</p>
-            `;
-            li.addEventListener('click', () => {
-                selectNoteById(result.id);
-                toggleSearch();
-            });
-            searchResultsContainer.appendChild(li);
-        });
     }
 
     function updateCurrentCourseTitle(courseName) {
@@ -618,22 +567,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .split('=')[1];
     }
 
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
     // Todo management functions
     async function fetchTodos(courseId) {
         if (!courseId) {
-            // Si aucun cours n'est sélectionné, on vide la liste des todos
             currentTodos = [];
             renderTodos();
             return;
@@ -712,23 +648,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Erreur lors de la suppression du todo:', error);
         }
     }
-
-    // Gestion des clics en dehors des overlays
-    document.addEventListener('mousedown', function(event) {
-        const searchOverlay = document.getElementById('searchOverlay');
-        const chatOverlay = document.querySelector('.chat-overlay');
-        const todoSidebar = document.getElementById('todoSidebar');
-
-        if (!searchOverlay.contains(event.target) && event.target !== document.getElementById('searchBtn')) {
-            searchOverlay.style.display = 'none';
-        }
-        if (!chatOverlay.contains(event.target) && event.target !== document.getElementById('chatBtn')) {
-            chatOverlay.style.display = 'none';
-        }
-        if (!todoSidebar.contains(event.target) && event.target !== document.getElementById('todoBtn')) {
-            todoSidebar.style.display = 'none';
-        }
-    });
 
     function renderHourDeclarationForm() {
         const durationOptions = [
@@ -826,29 +745,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-
     // Initialisation de l'état de la sidebar
-    sidebarVisible = false; // Commencez avec la sidebar cachée
+    sidebarVisible = false;
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
     const toggleBtn = document.getElementById('toggleSidebarBtn');
 
     if (window.innerWidth <= 768) {
-        // Pour les petits écrans
         sidebar.classList.add('hidden');
         sidebar.style.left = '-250px';
         mainContent.style.marginLeft = '0';
         toggleBtn.style.left = '10px';
     } else {
-        // Pour les grands écrans
         sidebarVisible = true;
         sidebar.classList.remove('hidden');
         sidebar.style.left = '0';
         mainContent.style.marginLeft = '250px';
         toggleBtn.style.left = '260px';
     }
-     // Adapter la mise en page lors du redimensionnement de la fenêtre
-     window.addEventListener('resize', function() {
+
+    window.addEventListener('resize', function() {
         const sidebar = document.querySelector('.sidebar');
         const mainContent = document.querySelector('.main-content');
         const toggleBtn = document.getElementById('toggleSidebarBtn');

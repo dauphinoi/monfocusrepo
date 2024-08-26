@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from monEspace.views import NoteViewSet, AttachmentViewSet, ChatViewSet, espacenote_view, TodoItemViewSet
+from monEspace.views import HomeworkViewSet, NoteViewSet, AttachmentViewSet, ChatViewSet, analyze_homework_and_create_feedback, espacenote_view, TodoItemViewSet
 
 router = DefaultRouter()
 router.register(r'notes', NoteViewSet, basename='note')
@@ -12,6 +12,8 @@ router.register(r'upload', AttachmentViewSet)
 router.register(r'chat', ChatViewSet, basename='chat')
 # Ajoutez cette ligne
 router.register(r'todo-items', TodoItemViewSet, basename='todo-item')
+#homework
+router.register(r'homeworks', HomeworkViewSet, basename='homework')
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -20,6 +22,7 @@ urlpatterns = [
     path("api/", include(router.urls)),
     path("", include("monFocusprof.urls")),
     path('api/chat/', ChatViewSet.as_view({'post': 'chat'}), name='chat'),
+    path('api/homeworks/<int:homework_id>/analyze_and_feedback/', analyze_homework_and_create_feedback, name='analyze_homework'),
 
 ]
 

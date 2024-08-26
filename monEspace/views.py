@@ -6,8 +6,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import ChatMessage, ChatSession, HourDeclaration, Note, Attachment, TodoItem
-from .serializers import NoteSerializer, AttachmentSerializer, TodoItemSerializer
+from .models import ChatMessage, ChatSession, Homework, HourDeclaration, Note, Attachment, TodoItem
+from .serializers import HomeworkSerializer, NoteSerializer, AttachmentSerializer, TodoItemSerializer
 from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError, PermissionDenied
@@ -698,3 +698,76 @@ def get_total_hours(request):
     total_hours = total_duration.total_seconds() / 3600
     
     return JsonResponse({"total_hours": f"{total_hours:.2f}"})
+
+# gestion des homewoks
+
+class HomeworkViewSet(viewsets.ModelViewSet):
+    serializer_class = HomeworkSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        now = timezone.now()
+        visitor = self.request.user.visitor
+        visitor_courses = VisitorSubjectCourse.objects.filter(visitor=visitor)
+        queryset = Homework.objects.filter(course__in=visitor_courses)
+        
+        status = self.request.query_params.get('status')
+        if status == 'upcoming':
+            return queryset.filter(due_date__gt=now)
+        elif status == 'past':
+            return queryset.filter(due_date__lte=now)
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import Homework, HomeworkFeedback
+from .serializers import HomeworkFeedbackSerializer
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def analyze_homework_and_create_feedback(request, homework_id):
+    try:
+        homework = Homework.objects.get(id=homework_id)
+    except Homework.DoesNotExist:
+        return Response({"error": "Homework not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Vérifiez si l'utilisateur a le droit de corriger ce devoir
+    if not request.user.has_perm('can_correct_homework', homework):
+        return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
+    # Récupérez le fichier image du devoir corrigé
+    corrected_homework_file = request.FILES.get('corrected_homework')
+    if not corrected_homework_file:
+        return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Ici, vous intégreriez votre logique d'analyse d'image
+    # Par exemple :
+    # analyzed_content = analyze_image(corrected_homework_file)
+    # grade = calculate_grade(analyzed_content)
+
+    # Pour cet exemple, nous utiliserons des valeurs factices
+    analyzed_content = "Bon travail sur les exercices 1 et 2. L'exercice 3 nécessite plus de travail."
+    grade = 15.5
+
+    # Créez ou mettez à jour le feedback
+    feedback, created = HomeworkFeedback.objects.update_or_create(
+        homework=homework,
+        defaults={
+            'content': analyzed_content,
+            'grade': grade,
+            'created_by': request.user
+        }
+    )
+
+    # Marquez le devoir comme corrigé
+    homework.is_corrected = True
+    homework.save()
+
+    serializer = HomeworkFeedbackSerializer(feedback)
+    return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
