@@ -660,125 +660,243 @@ function toggleSearch() {
     }
 
     async function handleChatSubmit(event = null) {
-        const chatInput = document.getElementById('chatInput');
-        let messageContent;
-    
-        if (event && event instanceof PointerEvent) {
-            console.log("Clic détecté, pas d'action nécessaire");
-            return;
-        } else if (typeof event === 'string') {
-            messageContent = event;
-        } else {
-            messageContent = chatInput.value.trim();
+    const chatInput = document.getElementById('chatInput');
+    let messageContent;
+
+    if (event && event instanceof PointerEvent) {
+        console.log("Clic détecté, pas d'action nécessaire");
+        return;
+    } else if (typeof event === 'string') {
+        messageContent = event;
+    } else {
+        messageContent = chatInput.value.trim();
+    }
+
+    if (messageContent === '') {
+        console.log("Message vide, pas d'envoi");
+        return;
+    }
+
+    addMessageToHistory('user', messageContent);
+    renderUserMessage(messageContent);
+    chatInput.value = '';
+
+    try {
+        if (!currentSessionId) {
+            console.log("Pas de session active, démarrage d'une nouvelle session");
+            await startNewChatSession();
         }
-    
-        if (messageContent === '') {
-            console.log("Message vide, pas d'envoi");
-            return;
+
+        const response = await fetch('/api/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({ 
+                message: messageContent,
+                session_id: currentSessionId
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    
-        addMessageToHistory('user', messageContent);
-        renderUserMessage(messageContent);
-        chatInput.value = '';
-    
-        try {
-            if (!currentSessionId) {
-                console.log("Pas de session active, démarrage d'une nouvelle session");
-                await startNewChatSession();
-            }
-    
-            const response = await fetch('/api/chat/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: JSON.stringify({ 
-                    message: messageContent,
-                    session_id: currentSessionId
-                }),
-            });
-    
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-    
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let aiResponseContent = '';
-            let currentMathExpression = '';
-            let isInsideMathExpression = false;
-            let aiMessageElement = null;
-            let source = null;
-    
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n');
-                
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = JSON.parse(line.slice(6));
-                        if (data.type === 'end') {
-                            break;
-                        } else if (data.type === 'source') {
-                            source = data.source;
-                        } else if (data.content) {
-                            for (let i = 0; i < data.content.length; i++) {
-                                if (data.content[i] === '$') {
-                                    if (isInsideMathExpression) {
-                                        currentMathExpression += '$';
-                                        aiResponseContent += renderMathExpression(currentMathExpression);
-                                        currentMathExpression = '';
-                                        isInsideMathExpression = false;
-                                    } else {
-                                        isInsideMathExpression = true;
-                                        currentMathExpression = '$';
-                                    }
-                                } else if (isInsideMathExpression) {
-                                    currentMathExpression += data.content[i];
-                                } else {
-                                    aiResponseContent += data.content[i];
-                                }
-                            }
-    
-                            if (!aiMessageElement) {
-                                aiMessageElement = document.createElement('div');
-                                aiMessageElement.className = 'chat-message ai';
-                                aiMessageElement.innerHTML = '<div class="message-content"></div>';
-                                document.getElementById('chatMessages').appendChild(aiMessageElement);
-                            }
-    
-                            const contentElement = aiMessageElement.querySelector('.message-content');
-                            contentElement.innerHTML = `<p>${aiResponseContent}</p>`;
-                            
-                            if (!isInsideMathExpression) {
-                                if (window.MathJax && window.MathJax.typesetPromise) {
-                                    window.MathJax.typesetPromise([contentElement])
-                                        .catch((err) => console.error('MathJax error:', err));
-                                }
-                            }
-                            
-                            scrollChatToBottom();
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiResponseContent = '';
+        let currentBlock = { type: 'text', content: '' };
+        let blocks = [];
+        let aiMessageElement = null;
+        let source = null;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = JSON.parse(line.slice(6));
+                    if (data.type === 'end') {
+                        break;
+                    } else if (data.type === 'source') {
+                        source = data.source;
+                    } else if (data.content) {
+                        aiResponseContent += data.content;
+                        
+                        // Analyse du contenu pour identifier les blocs spéciaux
+                        blocks = parseContent(aiResponseContent);
+
+                        if (!aiMessageElement) {
+                            aiMessageElement = document.createElement('div');
+                            aiMessageElement.className = 'chat-message ai';
+                            document.getElementById('chatMessages').appendChild(aiMessageElement);
                         }
+
+                        renderFormattedContent(aiMessageElement, blocks);
+                        scrollChatToBottom();
                     }
                 }
             }
-    
-            if (isInsideMathExpression) {
-                aiResponseContent += renderMathExpression(currentMathExpression);
-            }
-    
-            addMessageToHistory('ai', aiResponseContent, source);
-            finalizeAIMessageInUI(aiResponseContent, source);
-    
-        } catch (error) {
-            console.error('Erreur lors de l\'envoi du message:', error);
-            renderErrorMessage("Une erreur est survenue lors de l'envoi du message. Veuillez réessayer.");
         }
+
+        if (currentBlock.content) {
+            blocks.push(currentBlock);
+        }
+
+        addMessageToHistory('ai', aiResponseContent, source);
+        finalizeAIMessageInUI(aiResponseContent, source, blocks);
+
+    } catch (error) {
+        console.error('Erreur lors de l\'envoi du message:', error);
+        renderErrorMessage("Une erreur est survenue lors de l'envoi du message. Veuillez réessayer.");
     }
+}
+
+function renderFormattedContent(element, blocks) {
+    element.innerHTML = '';
+    const contentElement = document.createElement('div');
+    contentElement.className = 'message-content';
+
+    let currentList = null;
+
+    blocks.forEach((block, index) => {
+        let blockElement;
+        switch (block.type) {
+            case 'title':
+                blockElement = document.createElement('h2');
+                blockElement.textContent = block.content;
+                blockElement.className = 'section-title';
+                break;
+            case 'subtitle':
+                blockElement = document.createElement('h3');
+                blockElement.textContent = block.content;
+                blockElement.className = 'section-subtitle';
+                break;
+            case 'text':
+                blockElement = document.createElement('p');
+                blockElement.innerHTML = formatInlineElements(block.content);
+                break;
+            case 'bullet':
+                if (!currentList) {
+                    currentList = document.createElement('ul');
+                    contentElement.appendChild(currentList);
+                }
+                blockElement = document.createElement('li');
+                blockElement.innerHTML = formatInlineElements(block.content);
+                currentList.appendChild(blockElement);
+                return;
+            case 'math':
+                blockElement = document.createElement('div');
+                blockElement.className = 'math-block';
+                blockElement.innerHTML = `\\[${block.content}\\]`;
+                break;
+            default:
+                blockElement = document.createElement('p');
+                blockElement.textContent = block.content;
+        }
+
+        if (block.type !== 'bullet') {
+            currentList = null;
+        }
+
+        contentElement.appendChild(blockElement);
+
+        // Ajouter un espace après chaque bloc sauf le dernier
+        if (index < blocks.length - 1) {
+            contentElement.appendChild(document.createElement('br'));
+        }
+    });
+
+    element.appendChild(contentElement);
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([element])
+            .catch((err) => console.error('MathJax error:', err));
+    }
+}
+
+function formatInlineElements(text) {
+    // Gestion du gras
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Gestion de l'italique
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Gestion des expressions mathématiques inline
+    text = text.replace(/\$(.*?)\$/g, '\\($1\\)');
+    return text;
+}
+
+function parseContent(content) {
+    const lines = content.split('\n');
+    const blocks = [];
+    let currentBlock = null;
+
+    lines.forEach(line => {
+        line = line.trim();
+        if (line.startsWith('### ')) {
+            if (currentBlock) blocks.push(currentBlock);
+            currentBlock = { type: 'title', content: line.slice(4) };
+        } else if (line.startsWith('## ')) {
+            if (currentBlock) blocks.push(currentBlock);
+            currentBlock = { type: 'subtitle', content: line.slice(3) };
+        } else if (line.startsWith('• ') || line.startsWith('- ')) {
+            if (currentBlock && currentBlock.type !== 'bullet') {
+                blocks.push(currentBlock);
+            }
+            blocks.push({ type: 'bullet', content: line.slice(2) });
+            currentBlock = null;
+        } else if (line.startsWith('$') && line.endsWith('$') && line.length > 2) {
+            if (currentBlock) blocks.push(currentBlock);
+            blocks.push({ type: 'math', content: line.slice(1, -1) });
+            currentBlock = null;
+        } else if (line !== '') {
+            if (!currentBlock || currentBlock.type !== 'text') {
+                if (currentBlock) blocks.push(currentBlock);
+                currentBlock = { type: 'text', content: line };
+            } else {
+                currentBlock.content += ' ' + line;
+            }
+        } else if (currentBlock) {
+            blocks.push(currentBlock);
+            currentBlock = null;
+        }
+    });
+
+    if (currentBlock) blocks.push(currentBlock);
+    return blocks;
+}
+
+
+function finalizeAIMessageInUI(content, source, blocks) {
+    const aiMessageElement = document.querySelector('.chat-message.ai:last-child');
+    if (!aiMessageElement) return;
+
+    renderFormattedContent(aiMessageElement, blocks);
+
+    if (source) {
+        const sourceElement = document.createElement('p');
+        sourceElement.className = 'source';
+        sourceElement.innerHTML = `<a href="#" data-note-id="${source}">Source (Note)</a>`;
+        aiMessageElement.appendChild(sourceElement);
+
+        const sourceLink = sourceElement.querySelector('a');
+        sourceLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            selectNoteById(source);
+        });
+    }
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([aiMessageElement])
+            .catch((err) => console.error('MathJax error:', err));
+    }
+
+    scrollChatToBottom();
+}
     
     function renderMathExpression(expression) {
         expression = expression
@@ -792,90 +910,60 @@ function toggleSearch() {
         return expression;
     }
     
-    function finalizeAIMessageInUI(content, source) {
-        const aiMessageElement = document.querySelector('.chat-message.ai:last-child');
-        if (!aiMessageElement) return;
-    
-        if (source) {
-            const sourceElement = document.createElement('p');
-            sourceElement.className = 'source';
-            sourceElement.innerHTML = `<a href="#" data-note-id="${source}">Source (Note)</a>`;
-            aiMessageElement.appendChild(sourceElement);
-    
-            const sourceLink = sourceElement.querySelector('a');
-            sourceLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                selectNoteById(source);
-            });
-        }
-    
-        if (window.MathJax && window.MathJax.typesetPromise) {
-            window.MathJax.typesetPromise([aiMessageElement])
-                .catch((err) => console.error('MathJax error:', err));
-        }
-    
-        scrollChatToBottom();
-    }
 
     function addMessageToHistory(role, content, source = null) {
         chatHistory.push({ role, content, source });
     }
 
     function renderChatHistory() {
-        const chatMessagesContainer = document.getElementById('chatMessages');
-        chatMessagesContainer.innerHTML = '';
-        chatHistory.forEach(message => {
-            if (message.role === 'user') {
-                renderUserMessage(message.content);
-            } else {
-                renderAIMessage(message.content, message.source);
-            }
+    const chatMessagesContainer = document.getElementById('chatMessages');
+    chatMessagesContainer.innerHTML = '';
+    chatHistory.forEach(message => {
+        if (message.role === 'user') {
+            renderUserMessage(message.content);
+        } else {
+            renderAIMessage(message.content, message.source);
+        }
+    });
+    scrollChatToBottom();
+}
+
+function renderUserMessage(content) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'chat-message user';
+    messageElement.innerHTML = `<div class="message-content"><p>${content}</p></div>`;
+    document.getElementById('chatMessages').appendChild(messageElement);
+}
+
+function renderAIMessage(content, source) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'chat-message ai';
+    
+    const blocks = parseContent(content);
+    renderFormattedContent(messageElement, blocks);
+    
+    if (source) {
+        const sourceElement = document.createElement('p');
+        sourceElement.className = 'source';
+        sourceElement.innerHTML = `<a href="#" data-note-id="${source}">Source (Note)</a>`;
+        messageElement.appendChild(sourceElement);
+        
+        const sourceLink = sourceElement.querySelector('a');
+        sourceLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            selectNoteById(source);
         });
     }
-
-    function renderUserMessage(content) {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'chat-message user';
-        messageElement.innerHTML = `<div class="message-content"><p>${content}</p></div>`;
-        document.getElementById('chatMessages').appendChild(messageElement);
-        scrollChatToBottom();
+    
+    document.getElementById('chatMessages').appendChild(messageElement);
+    
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([messageElement])
+            .catch((err) => console.error('MathJax error:', err));
+    } else {
+        console.warn('MathJax not fully loaded yet');
     }
-
-    function renderAIMessage(content, source) {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'chat-message ai';
-        let sourceHtml = '';
-        
-        if (source) {
-            sourceHtml = `<p class="source"><a href="#" data-note-id="${source}">Source (Note)</a></p>`;
-        }
-        
-        messageElement.innerHTML = `
-            <div class="message-content">
-                <p>${content}</p>
-                ${sourceHtml}
-            </div>
-        `;
-        
-        if (source) {
-            const sourceLink = messageElement.querySelector('a[data-note-id]');
-            if (sourceLink) {
-                sourceLink.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    selectNoteById(source);
-                });
-            }
-        }
-        
-        document.getElementById('chatMessages').appendChild(messageElement);
-        if (window.MathJax && window.MathJax.typesetPromise) {
-            window.MathJax.typesetPromise([messageElement])
-                .catch((err) => console.error('MathJax error:', err));
-        } else {
-            console.warn('MathJax not fully loaded yet');
-        }
-        scrollChatToBottom();
-    }
+}
 
     function scrollChatToBottom() {
         const chatMessagesContainer = document.getElementById('chatMessages');
