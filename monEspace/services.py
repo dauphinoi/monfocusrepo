@@ -20,7 +20,7 @@ nltk.download('stopwords')
 load_dotenv()
 
 # Initialisez le client OpenAI
-client = OpenAI(api_key=os.getenv('openai_API_KEY'))
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 
 # Initialisation de Pinecone
