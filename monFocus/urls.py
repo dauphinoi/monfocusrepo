@@ -3,7 +3,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from monEspace.views import HomeworkViewSet, NoteViewSet, AttachmentViewSet, ChatViewSet, analyze_homework_and_create_feedback, espacenote_view, TodoItemViewSet
+from monEspace.views import HomeworkViewSet, NoteViewSet, AttachmentViewSet, analyze_homework_and_create_feedback, espacenote_view, TodoItemViewSet
+from monEspace.chat_view import ChatViewSet
 
 router = DefaultRouter()
 router.register(r'notes', NoteViewSet, basename='note')

@@ -1,64 +1,42 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    let currentHomeworks = {
+    upcoming: [],
+    past: []
+    };
+    let activeHomeworkTab = 'upcoming';
     let allNotes = [];
     let courseNotes = [];
     let recentNotes = [];
     let selectedNote = null;
     let currentCourseId = null;
     let currentTodos = [];
-    let totalHours = 0;
     let sidebarVisible = true;
     let currentAttachmentIndex = 0;
     let currentAttachments = [];
+    const dataCache = {
+        courses: coursesData,
+        notes: {},
+        attachments: {},
+        todos: {}
+    };
+
+    // Éléments DOM fréquemment utilisés
     const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
     const resetPasswordBtn = document.getElementById('resetPasswordBtn');
     const resetPasswordModal = document.getElementById('resetPasswordModal');
     const cancelResetBtn = document.getElementById('cancelReset');
     const resetPasswordForm = document.getElementById('resetPasswordForm');
-
-    // Ajout de styles CSS pour le formulaire de déclaration des heures
-    const style = document.createElement('style');
-    style.textContent = `
-        #hourDeclarationForm {
-            background-color: #f0f0f0;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-        #hourDeclarationForm h3 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-        #hourDeclarationForm select,
-        #hourDeclarationForm input[type="date"],
-        #hourDeclarationForm button {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        #hourDeclarationForm button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        #hourDeclarationForm button:hover {
-            background-color: #45a049;
-        }
-        #totalHours {
-            font-weight: bold;
-            color: #4CAF50;
-        }
-    `;
-    document.head.appendChild(style);
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    const todoSidebar = document.getElementById('todoSidebar');
 
     // Initialisation
     initTinyMCE();
-    fetchAllNotes();
     setupEventListeners();
     handleResponsiveness();
+    initializeCourseEvents();
+    toggleView('courses');
 
     function initTinyMCE() {
         tinymce.init({
@@ -94,30 +72,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupEventListeners() {
+
+        // Gestion des clics en dehors des overlays
+   document.addEventListener('mousedown', function(event) {
+    const todoSidebar = document.getElementById('todoSidebar');
+    const overlayBackground = document.getElementById('overlayBackground');
+
+    if (event.target === overlayBackground) {
+        if (todoSidebar.style.display === 'block') {
+            toggleTodo();
+        }
+    }
+});
+
+    document.getElementById('homeworkTab').addEventListener('click', () => switchTab('homework'));
+    document.getElementById('tasksTab').addEventListener('click', () => switchTab('todo'));
+    
+    document.querySelectorAll('.sub-tab-button').forEach(button => {
+        button.addEventListener('click', (e) => switchHomeworkTab(e.target.dataset.tab));
+    });
+
+    document.getElementById('backToHomeworkList').addEventListener('click', showHomeworkList);
+        
         document.addEventListener('mousedown', handleOutsideClick);
-        resetPasswordBtn.addEventListener('click', function() {
-            resetPasswordModal.style.display = 'block';
-        });
-
-        cancelResetBtn.addEventListener('click', function() {
-            resetPasswordModal.style.display = 'none';
-        });
-
+        resetPasswordBtn.addEventListener('click', () => resetPasswordModal.style.display = 'block');
+        cancelResetBtn.addEventListener('click', () => resetPasswordModal.style.display = 'none');
         resetPasswordForm.addEventListener('submit', handleResetPasswordSubmit);
-
-        // Fermer le modal si on clique en dehors
-        window.addEventListener('click', function(event) {
-            if (event.target === resetPasswordModal) {
-                resetPasswordModal.style.display = 'none';
-            }
+        window.addEventListener('click', (event) => {
+            if (event.target === resetPasswordModal) resetPasswordModal.style.display = 'none';
         });
         toggleSidebarBtn.addEventListener('click', toggleSidebar);
         window.addEventListener('resize', handleResponsiveness);
         document.getElementById('newNoteBtn').addEventListener('click', createNewNote);
-        document.getElementById('todoBtn').addEventListener('click', () => {
-            toggleTodo();
-            renderHourDeclarationForm();
-        });
+        document.getElementById('todoBtn').addEventListener('click', toggleTodo);
         document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
         document.getElementById('addImageBtn').addEventListener('click', () => triggerFileInput('image'));
         document.getElementById('addVideoBtn').addEventListener('click', () => triggerFileInput('video'));
@@ -133,7 +120,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 todoInput.value = '';
             }
         });
+        document.getElementById('prevAttachment').addEventListener('click', navigateAttachment('prev'));
+        document.getElementById('nextAttachment').addEventListener('click', navigateAttachment('next'));
+    }
 
+    function initializeCourseEvents() {
         document.querySelectorAll('.course-item').forEach(item => {
             item.addEventListener('click', () => {
                 const courseId = item.dataset.courseId;
@@ -147,10 +138,116 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Ajoutez ces nouvelles fonctions
+function switchTab(tab) {
+    document.getElementById('todoContent').classList.toggle('active', tab === 'todo');
+    document.getElementById('homeworkContent').classList.toggle('active', tab === 'homework');
+    document.getElementById('tasksTab').classList.toggle('active', tab === 'todo');
+    document.getElementById('homeworkTab').classList.toggle('active', tab === 'homework');
+    
+    if (tab === 'homework') {
+        renderHomeworks();
+    }
+}
+
+function switchHomeworkTab(tab) {
+    activeHomeworkTab = tab;
+    document.querySelectorAll('.sub-tab-button').forEach(button => {
+        button.classList.toggle('active', button.dataset.tab === tab);
+    });
+    document.getElementById('upcomingHomework').style.display = tab === 'upcoming' ? 'block' : 'none';
+    document.getElementById('pastHomework').style.display = tab === 'past' ? 'block' : 'none';
+    renderHomeworks();
+}
+
+async function fetchHomeworks(courseId) {
+    if (!courseId) {
+        currentHomeworks = { upcoming: [], past: [] };
+        renderHomeworks();
+        return;
+    }
+
+    try {
+        const upcomingResponse = await fetch(`/api/homeworks/?course=${courseId}&status=upcoming`);
+        const pastResponse = await fetch(`/api/homeworks/?course=${courseId}&status=past`);
+
+        if (!upcomingResponse.ok || !pastResponse.ok) {
+            throw new Error('Erreur lors de la récupération des devoirs');
+        }
+
+        currentHomeworks.upcoming = await upcomingResponse.json();
+        currentHomeworks.past = await pastResponse.json();
+        
+        renderHomeworks();
+    } catch (error) {
+        console.error('Erreur lors de la récupération des devoirs:', error);
+    }
+}
+
+function renderHomeworks() {
+    const upcomingList = document.getElementById('upcomingHomework');
+    const pastList = document.getElementById('pastHomework');
+    upcomingList.innerHTML = '';
+    pastList.innerHTML = '';
+    
+    function createHomeworkItem(homework) {
+        const li = document.createElement('li');
+        li.className = 'homework-item';
+        li.innerHTML = `
+            <h4>${homework.title}</h4>
+            <p>Date limite : ${new Date(homework.due_date).toLocaleDateString()}</p>
+            <p>Statut : ${homework.is_corrected ? 'Corrigé (résumé disponible sur votre boite mail)' : 'Non corrigé'}</p>
+        `;
+        li.addEventListener('click', () => showHomeworkDetails(homework));
+        return li;
+    }
+    
+    currentHomeworks.upcoming.forEach(homework => {
+        upcomingList.appendChild(createHomeworkItem(homework));
+    });
+    
+    currentHomeworks.past.forEach(homework => {
+        pastList.appendChild(createHomeworkItem(homework));
+    });
+
+    showHomeworkList();
+}
+
+function showHomeworkDetails(homework) {
+    const detailsDiv = document.getElementById('homeworkDetails');
+    const listDiv = document.getElementById('homeworkList');
+
+    document.getElementById('homeworkTitle').textContent = homework.title;
+    document.getElementById('homeworkDescription').textContent = homework.description || 'Aucune description disponible';
+    document.getElementById('homeworkDueDate').textContent = `Date limite : ${new Date(homework.due_date).toLocaleDateString()}`;
+    document.getElementById('homeworkStatus').textContent = `Statut : ${homework.is_corrected ? 'Corrigé' : 'Non corrigé'}`;
+
+    // Ajoutez d'autres détails si nécessaire, par exemple le feedback
+    if (homework.feedback) {
+        const feedbackElement = document.createElement('div');
+        feedbackElement.innerHTML = `
+            <h4>Feedback</h4>
+            <p>${homework.feedback.content}</p>
+            <p>Note : ${homework.feedback.grade || 'Non noté'}</p>
+        `;
+        detailsDiv.appendChild(feedbackElement);
+    }
+
+    listDiv.style.display = 'none';
+    detailsDiv.style.display = 'block';
+}
+
+function showHomeworkList() {
+    const detailsDiv = document.getElementById('homeworkDetails');
+    const listDiv = document.getElementById('homeworkList');
+
+    detailsDiv.style.display = 'none';
+    listDiv.style.display = 'block';
+}
+
     async function handleResetPasswordSubmit(e) {
         e.preventDefault();
         const email = document.getElementById('emailInput').value;
-        
         try {
             const response = await fetch('/accounts/reset-password/', {
                 method: 'POST',
@@ -160,48 +257,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({ email: email }),
             });
-    
             const data = await response.json();
-            if (data.success) {
-                alert('Un email de réinitialisation a été envoyé à ' + email);
-            } else {
-                alert('Erreur : ' + data.message);
-            }
+            alert(data.success ? 'Un email de réinitialisation a été envoyé à ' + email : 'Erreur : ' + data.message);
         } catch (error) {
             console.error('Erreur lors de la demande de réinitialisation:', error);
             alert('Une erreur est survenue lors de la demande de réinitialisation.');
         }
-    
         resetPasswordModal.style.display = 'none';
     }
 
     function toggleSidebar() {
-        const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
-        const toggleBtn = document.getElementById('toggleSidebarBtn');
-        
         sidebarVisible = !sidebarVisible;
-        
         if (sidebarVisible) {
             sidebar.classList.remove('hidden');
             sidebar.style.left = '0';
             if (window.innerWidth > 768) {
                 mainContent.style.marginLeft = '250px';
             }
-            toggleBtn.style.left = '260px';
+            toggleSidebarBtn.style.left = '260px';
         } else {
             sidebar.classList.add('hidden');
             sidebar.style.left = '-250px';
             mainContent.style.marginLeft = '0';
-            toggleBtn.style.left = '10px';
+            toggleSidebarBtn.style.left = '10px';
         }
     }
 
     function handleResponsiveness() {
-        const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
-        const todoSidebar = document.getElementById('todoSidebar');
-        
         if (window.innerWidth <= 768) {
             sidebar.classList.add('hidden');
             sidebar.style.left = '-250px';
@@ -217,14 +299,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             todoSidebar.style.width = '350px';
         }
-        
-        // Ajuster la hauteur de la liste des tâches
-        const todoList = document.getElementById('todoList');
-        const sidebarHeight = todoSidebar.clientHeight;
-        const otherElementsHeight = todoSidebar.querySelector('h2').offsetHeight +
-                                    document.getElementById('addTodoForm').offsetHeight +
-                                    document.getElementById('hourDeclarationForm').offsetHeight;
-        todoList.style.maxHeight = `${sidebarHeight - otherElementsHeight - 40}px`;
     }
 
     function showCourseView() {
@@ -235,25 +309,20 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('currentCourseTitle').textContent = '';
     }
 
-    async function fetchAllNotes() {
-        try {
-            const response = await fetch('/api/notes/');
-            allNotes = await response.json();
-        } catch (error) {
-            console.error('Error fetching all notes:', error);
-        }
-    }
-
     async function fetchCourseNotes(courseId, courseName) {
         try {
             currentCourseId = courseId;
-            const response = await fetch(`/api/notes/course_notes/?course_id=${courseId}`);
-            courseNotes = await response.json();
+            if (!dataCache.notes[courseId]) {
+                const response = await fetch(`/api/notes/course_notes/?course_id=${courseId}`);
+                dataCache.notes[courseId] = await response.json();
+            }
+            courseNotes = dataCache.notes[courseId];
             updateRecentNotes();
             renderNotes();
             updateCurrentCourseTitle(courseName);
             toggleView('notes');
             fetchTodos(courseId);
+            fetchHomeworks(courseId);
         } catch (error) {
             console.error('Error fetching course notes:', error);
         }
@@ -270,8 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const allNotesList = document.getElementById('allNotesList');
         allNotesList.innerHTML = '';
         courseNotes.forEach(note => {
-            const noteElement = createNoteElement(note);
-            allNotesList.appendChild(noteElement);
+            allNotesList.appendChild(createNoteElement(note));
         });
     }
 
@@ -279,8 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const recentNotesList = document.getElementById('recentNotesList');
         recentNotesList.innerHTML = '';
         recentNotes.forEach(note => {
-            const noteElement = createNoteElement(note);
-            recentNotesList.appendChild(noteElement);
+            recentNotesList.appendChild(createNoteElement(note));
         });
     }
 
@@ -326,7 +393,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderAttachment(attachment) {
         const mediaContent = document.getElementById('mediaContent');
         mediaContent.innerHTML = '';
-    
         switch (attachment.file_type) {
             case 'image':
                 mediaContent.innerHTML = `<img src="${attachment.file}" alt="Image">`;
@@ -396,50 +462,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function toggleView(view) {
-        const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-        const courseGrid = document.getElementById('courseGrid');
-        const noteContent = document.getElementById('noteContent');
-        const allNotesList = document.getElementById('allNotesList');
-        const todoSidebar = document.getElementById('todoSidebar');
-        const notetitle = document.getElementById('noteTitle');
-        const recentNotesList = document.getElementById('recentNotesList');
-        
-        switch(view) {
-            case 'courses':
-                toggleSidebarBtn.style.display = 'block';
-                courseGrid.style.display = 'grid';
-                noteContent.style.display = 'none';
-                allNotesList.style.display = 'none';
-                currentTodos = [];
-                renderTodos();
-                todoSidebar.style.display = 'none';
-                notetitle.style.display = 'none';
-                recentNotesList.style.display = 'none';
-                break;
-            case 'notes':
-                toggleSidebarBtn.style.display = 'block';
-                courseGrid.style.display = 'none';
-                noteContent.style.display = 'none';
-                allNotesList.style.display = 'block';
-                todoSidebar.style.display = currentCourseId ? 'block' : 'none';
-                recentNotesList.style.display = 'block';
-                break;
-            case 'editor':
-                toggleSidebarBtn.style.display = 'block';
-                courseGrid.style.display = 'none';
-                noteContent.style.display = 'block';
-                allNotesList.style.display = 'block';
-                todoSidebar.style.display = 'none';
-                recentNotesList.style.display = 'block';
-                break;
+        const elements = {
+            courseGrid: document.getElementById('courseGrid'),
+            noteContent: document.getElementById('noteContent'),
+            allNotesList: document.getElementById('allNotesList'),
+            noteTitle: document.getElementById('noteTitle'),
+            recentNotesList: document.getElementById('recentNotesList')
+        };
+
+        const viewConfigs = {
+            courses: { display: ['courseGrid'], hide: ['noteContent', 'allNotesList', 'noteTitle', 'recentNotesList'] },
+            notes: { display: ['allNotesList', 'recentNotesList'], hide: ['courseGrid', 'noteContent'], conditional: ['todoSidebar'] },
+            editor: { display: ['noteContent', 'allNotesList', 'recentNotesList'], hide: ['courseGrid', 'todoSidebar'] }
+        };
+
+        Object.entries(elements).forEach(([key, element]) => {
+            if (viewConfigs[view].display.includes(key)) {
+                element.style.display = key === 'courseGrid' ? 'grid' : 'block';
+            } else if (viewConfigs[view].hide.includes(key)) {
+                element.style.display = 'none';
+            } else if (viewConfigs[view].conditional && viewConfigs[view].conditional.includes(key)) {
+                element.style.display = currentCourseId ? 'block' : 'none';
+            }
+        });
+
+        if (view === 'courses') {
+            currentTodos = [];
+            renderTodos();
         }
     }
 
     function handleOutsideClick(event) {
         const todoSidebar = document.getElementById('todoSidebar');
         const toggleBtn = document.getElementById('todoBtn');
-
-        // Vérifiez si le clic est en dehors de l'overlay et n'est pas sur le bouton de bascule
         if (!todoSidebar.contains(event.target) && event.target !== toggleBtn) {
             closeTodoSidebar();
         }
@@ -448,21 +503,32 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeTodoSidebar() {
         const todoSidebar = document.getElementById('todoSidebar');
         todoSidebar.style.display = 'none';
+        toggleOverlayBackground(false);
+    }   
+
+    function toggleOverlayBackground(show) {
+    const overlayBackground = document.getElementById('overlayBackground');
+    overlayBackground.style.display = show ? 'block' : 'none';
+    document.body.style.overflow = show ? 'hidden' : 'auto';
     }
 
+    
     function toggleTodo() {
-        const todoSidebar = document.getElementById('todoSidebar');
-        if (todoSidebar.style.display === 'none' || todoSidebar.style.display === '') {
-            todoSidebar.style.display = 'flex';
-            if (currentCourseId) {
-                fetchTodos(currentCourseId);
-            }
-            renderHourDeclarationForm();
-            handleResponsiveness();
-        } else {
-            closeTodoSidebar();
+    const todoSidebar = document.getElementById('todoSidebar');
+    const isVisible = todoSidebar.style.display === 'flex';
+    
+    if (!isVisible) {
+        todoSidebar.style.display = 'flex';
+        toggleOverlayBackground(true);
+        if (currentCourseId) {
+            fetchTodos(currentCourseId);
+            fetchHomeworks(currentCourseId);
         }
+        handleResponsiveness();
+    } else {
+        closeTodoSidebar();
     }
+}
 
     function triggerFileInput(type) {
         const fileInput = document.getElementById('fileInput');
@@ -536,22 +602,18 @@ document.addEventListener('DOMContentLoaded', function() {
         prevButton.style.display = currentAttachmentIndex > 0 ? 'block' : 'none';
         nextButton.style.display = currentAttachmentIndex < currentAttachments.length - 1 ? 'block' : 'none';
     }
-    
-    document.getElementById('prevAttachment').addEventListener('click', () => {
-        if (currentAttachmentIndex > 0) {
-            currentAttachmentIndex--;
+
+    function navigateAttachment(direction) {
+        return () => {
+            if (direction === 'prev' && currentAttachmentIndex > 0) {
+                currentAttachmentIndex--;
+            } else if (direction === 'next' && currentAttachmentIndex < currentAttachments.length - 1) {
+                currentAttachmentIndex++;
+            }
             renderAttachment(currentAttachments[currentAttachmentIndex]);
             updateNavigationButtons();
-        }
-    });
-    
-    document.getElementById('nextAttachment').addEventListener('click', () => {
-        if (currentAttachmentIndex < currentAttachments.length - 1) {
-            currentAttachmentIndex++;
-            renderAttachment(currentAttachments[currentAttachmentIndex]);
-            updateNavigationButtons();
-        }
-    });
+        };
+    }
 
     function closeMediaOverlay() {
         document.getElementById('mediaOverlay').style.display = 'none';
@@ -567,19 +629,28 @@ document.addEventListener('DOMContentLoaded', function() {
             .split('=')[1];
     }
 
-    // Todo management functions
     async function fetchTodos(courseId) {
         if (!courseId) {
             currentTodos = [];
             renderTodos();
             return;
         }
+
+        if (dataCache.todos[courseId]) {
+            currentTodos = dataCache.todos[courseId];
+            renderTodos();
+            return;
+        }
+
         try {
             const response = await fetch(`/api/todo-items/?course=${courseId}`);
             if (!response.ok) {
                 throw new Error('Erreur lors de la récupération des todos');
             }
             currentTodos = await response.json();
+            
+            dataCache.todos[courseId] = currentTodos;
+            
             renderTodos();
         } catch (error) {
             console.error('Erreur lors de la récupération des todos:', error);
@@ -623,6 +694,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const newTodo = await response.json();
             currentTodos.push(newTodo);
+            
+            dataCache.todos[currentCourseId] = currentTodos;
+            
             renderTodos();
         } catch (error) {
             console.error('Erreur lors de l\'ajout du todo:', error);
@@ -643,146 +717,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('Erreur lors de la suppression du todo');
             }
             currentTodos = currentTodos.filter(todo => todo.id !== todoId);
+            
+            dataCache.todos[currentCourseId] = currentTodos;
+            
             renderTodos();
         } catch (error) {
             console.error('Erreur lors de la suppression du todo:', error);
         }
     }
 
-    function renderHourDeclarationForm() {
-        const durationOptions = [
-            { value: 60, label: '1h' },
-            { value: 90, label: '1h30' },
-            { value: 120, label: '2h' },
-            { value: 150, label: '2h30' },
-            { value: 180, label: '3h' },
-            { value: 210, label: '3h30' },
-            { value: 240, label: '4h' },
-            { value: 270, label: '4h30' },
-            { value: 300, label: '5h' },
-            { value: 330, label: '5h30' },
-        ];
-    
-        const formHTML = `
-            <h3>Déclarer mes heures</h3>
-            <select id="courseSelect">
-                ${coursesData.map(course => `<option value="${course.id}">${course.visitor_first_name} ${course.visitor_last_name} - ${course.subject_name} - ${course.course_type}</option>`).join('')}
-            </select>
-            <input type="date" id="declarationDate">
-            <select id="declarationDuration">
-                ${durationOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
-            </select>
-            <button id="declareHoursBtn">Enregistrer</button>
-            <p>Total des heures déclarées: <span id="totalHours">${totalHours}h</span></p>
-        `;
-        const todoSidebar = document.getElementById('todoSidebar');
-        let hourDeclarationForm = document.getElementById('hourDeclarationForm');
-        if (!hourDeclarationForm) {
-            hourDeclarationForm = document.createElement('div');
-            hourDeclarationForm.id = 'hourDeclarationForm';
-            todoSidebar.appendChild(hourDeclarationForm);
-        }
-        hourDeclarationForm.innerHTML = formHTML;
-        handleResponsiveness();
-        document.getElementById('declareHoursBtn').addEventListener('click', declareHours);
-        updateTotalHours();
-    }
-
-    async function declareHours() {
-        const courseId = document.getElementById('courseSelect').value;
-        const date = document.getElementById('declarationDate').value;
-        const durationMinutes = document.getElementById('declarationDuration').value;
-    
-        if (!date || !durationMinutes) {
-            alert('Veuillez remplir tous les champs correctement.');
-            return;
-        }
-    
-        const formData = new FormData();
-        formData.append('course_id', courseId);
-        formData.append('date', date);
-        formData.append('duration_minutes', durationMinutes);
-    
-        try {
-            const response = await fetch('/monespace/espacenote/declare-hours/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: formData
-            });
-            const data = await response.json();
-            if (data.success) {
-                alert('Heures déclarées avec succès');
-                updateTotalHours();
-            } else {
-                alert('Erreur lors de la déclaration des heures: ' + data.message);
-            }
-        } catch (error) {
-            console.error('Erreur lors de la déclaration des heures:', error);
-            alert('Une erreur est survenue lors de la déclaration des heures.');
-        }
-    }
-
-    async function updateTotalHours() {
-        try {
-            const response = await fetch('/monespace/espacenote/get-total-hours/');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            totalHours = parseFloat(data.total_hours);
-            const totalHoursElement = document.getElementById('totalHours');
-            if (totalHoursElement) {
-                totalHoursElement.textContent = totalHours.toFixed(2) + 'h';
-            }
-        } catch (error) {
-            console.error('Erreur lors de la récupération du total des heures:', error);
-            const totalHoursElement = document.getElementById('totalHours');
-            if (totalHoursElement) {
-                totalHoursElement.textContent = 'Erreur';
-            }
-        }
-    }
-
     // Initialisation de l'état de la sidebar
-    sidebarVisible = false;
-    const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.querySelector('.main-content');
-    const toggleBtn = document.getElementById('toggleSidebarBtn');
-
     if (window.innerWidth <= 768) {
+        sidebarVisible = false;
         sidebar.classList.add('hidden');
         sidebar.style.left = '-250px';
         mainContent.style.marginLeft = '0';
-        toggleBtn.style.left = '10px';
+        toggleSidebarBtn.style.left = '10px';
     } else {
         sidebarVisible = true;
         sidebar.classList.remove('hidden');
         sidebar.style.left = '0';
         mainContent.style.marginLeft = '250px';
-        toggleBtn.style.left = '260px';
+        toggleSidebarBtn.style.left = '260px';
     }
-
-    window.addEventListener('resize', function() {
-        const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
-        const toggleBtn = document.getElementById('toggleSidebarBtn');
-    
-        if (window.innerWidth > 768) {
-            if (sidebarVisible) {
-                mainContent.style.marginLeft = '250px';
-                toggleBtn.style.left = '260px';
-            }
-        } else {
-            mainContent.style.marginLeft = '0';
-            if (sidebarVisible) {
-                toggleBtn.style.left = '260px';
-            }
-        }
-    });
-
-    // Initialisation
-    toggleView('courses');
-    updateTotalHours();
 });

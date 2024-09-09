@@ -107,7 +107,7 @@ def semantic_search(query, user):
 
 
 
-def analyze_image_with_gpt4(file_object):
+def analyze_image_with_gpt4(file_object, prompt="Décrivez en détail le contenu de cette image, en vous concentrant sur tout le texte visible et les informations importantes."):
     try:
         # Lire et encoder l'image directement depuis l'objet file
         encoded_image = base64.b64encode(file_object.read()).decode('utf-8')
@@ -120,7 +120,7 @@ def analyze_image_with_gpt4(file_object):
                     "content": [
                         {
                             "type": "text",
-                            "text": "Décrivez en détail le contenu de cette image, en vous concentrant sur tout le texte visible et les informations importantes."
+                            "text": prompt
                         },
                         {
                             "type": "image_url",
@@ -137,3 +137,27 @@ def analyze_image_with_gpt4(file_object):
     except Exception as e:
         print(f"Erreur lors de l'analyse de l'image : {str(e)}")
         return "Impossible d'analyser l'image."
+
+
+# gestion des homeworks
+
+from django.core.mail import send_mail
+from django.conf import settings
+
+def send_email_to_teacher(homework, file_name, analysis_result):
+    subject = f"Nouvelle analyse d'image pour le devoir: {homework.title}"
+    message = f"""
+    L'élève {homework.course.visitor.user.get_full_name()} a soumis une image pour analyse pour son devoir.
+    
+    Cours: {homework.course.subject.name}
+    Devoir: {homework.title}
+    Date limite: {homework.due_date}
+    Nom du fichier: {file_name}
+    
+    Analyse de l'image:
+    {analysis_result}
+    """
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [homework.course.teacher.user.email]
+    
+    send_mail(subject, message, from_email, recipient_list)

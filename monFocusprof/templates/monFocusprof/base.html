@@ -152,13 +152,13 @@
             <div class="menu">
                 <a href="{% url 'index' %}">Accueil</a>
                 <a href="{% url 'index' %}" id="renseignement-link" data-current-page="{{ request.resolver_match.url_name }}">Je me renseigne</a>
-                <div class="dropdown">
+                <!-- <div class="dropdown">
                     <a href="#">Nos offres</a>
                     <div class="dropdown-content">
                         <a href="{% url 'product' %}">Lunette monFocus</a>
                         <a href="#">Enseignant(e)</a>
                     </div>
-                </div>
+                </div> -->
                 <a href="{% url 'accounts:postuler_with_step' step=1 %}" class="btn-devenir">Devenir enseignant <i class="fas fa-arrow-right icon"></i></a>
                 <a href="{% url 'accounts:login_view' %}" class="btn-connect"><i class="fas fa-lock icon"></i> Se connecter à mon espace</a>
             </div>
@@ -189,8 +189,8 @@
             <div class="footer-section">
                 <h3>Nos offres</h3>
                 <ul>
-                    <li><a href="#">Nos enseignants</a></li>
-                    <li><a href="#">Lunettes monFocus</a></li>
+                    <li><a href="#">Nos partenaires</a></li>
+                    <li><a href="#">Support 24/7 avec l'IA monFocus</a></li>
                 </ul>
             </div>
             <div class="footer-section">
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const profileSection = document.getElementById('profile-section');
         if (profileSection) {
             // Scroll doux vers la section
-            profileSection.scrollIntoView({ behavior: 'smooth' });
+            // profileSection.scrollIntoView({ behavior: 'smooth' });
 
             profileSection.style.transition = 'background-color 0.5s ease';
             profileSection.style.backgroundColor = 'green'; // Vert semi-transparent
