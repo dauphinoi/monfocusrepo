@@ -11,7 +11,7 @@ from .serializers import HomeworkSerializer, NoteSerializer, AttachmentSerialize
 from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import ValidationError, PermissionDenied
-from .services import analyze_image_with_gpt4, send_email_to_teacher, update_note_embedding, semantic_search
+from .services import analyze_homework_with_claude, analyze_image_with_gpt4, send_email_to_teacher, update_note_embedding, semantic_search
 import logging
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
@@ -531,17 +531,7 @@ class HomeworkViewSet(viewsets.ModelViewSet):
         for file in files:
             if file.content_type.startswith('image/'):
                 # Analyse de l'image
-                prompt = """
-                    Analysez cette copie d'élève corrigée. Votre tâche est de :
-
-                    1. Identifier la matière et le sujet principal.
-                    2. Repérer les principales erreurs de l'élève.
-                    3. Déterminer 2-3 concepts clés mal compris par l'élève.
-                    4. Suggérer 3 points spécifiques sur lesquels le tuteur devrait se concentrer pour aider l'élève.
-                    5. Proposer une activité concrète pour renforcer la compréhension du concept le plus problématique.
-
-                    Votre analyse doit être concise et directement exploitable par le tuteur pour élaborer un plan d'aide efficace."""
-                analysis_result = analyze_image_with_gpt4(file, prompt)
+                analysis_result = analyze_homework_with_claude(file)
                 analysis_results.append(analysis_result)
 
                 # Envoi de l'email à l'enseignant

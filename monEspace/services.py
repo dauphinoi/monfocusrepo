@@ -1,3 +1,4 @@
+import json
 from sentence_transformers import SentenceTransformer
 from .models import Note
 import re
@@ -141,23 +142,107 @@ def analyze_image_with_gpt4(file_object, prompt="Décrivez en détail le contenu
 
 # gestion des homeworks
 
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.conf import settings
 
 def send_email_to_teacher(homework, file_name, analysis_result):
-    subject = f"Nouvelle analyse d'image pour le devoir: {homework.title}"
-    message = f"""
-    L'élève {homework.course.visitor.user.get_full_name()} a soumis une image pour analyse pour son devoir.
+    subject = f"Analyse du devoir de {homework.course.visitor.user.get_full_name()} - {homework.course.subject.name}"
     
-    Cours: {homework.course.subject.name}
-    Devoir: {homework.title}
-    Date limite: {homework.due_date}
-    Nom du fichier: {file_name}
-    
-    Analyse de l'image:
-    {analysis_result}
-    """
-    from_email = settings.DEFAULT_FROM_EMAIL
-    recipient_list = [homework.course.teacher.user.email]
-    
-    send_mail(subject, message, from_email, recipient_list)
+    context = {
+        'student_name': homework.course.visitor.user.get_full_name(),
+        'course_name': homework.course.subject.name,
+        'homework_subject': homework.title,
+        'misunderstood_concepts': analysis_result.get('concepts_cles_mal_compris', []),
+        'points_to_focus': analysis_result.get('points_specifiques', []),
+        'suggested_activity': analysis_result.get('activite_concrete', '')
+    }
+
+    html_content = render_to_string('monEspace/homework_analysis_email.html', context)
+    text_content = strip_tags(html_content)
+
+    msg = EmailMultiAlternatives(
+        subject,
+        text_content,
+        settings.DEFAULT_FROM_EMAIL,
+        [homework.course.teacher.user.email]
+    )
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
+
+
+
+
+from anthropic import Anthropic
+import base64
+import json
+
+def analyze_homework_with_claude(file_object, prompt=None):
+    if prompt is None:
+        prompt = """
+        Analysez cette copie d'élève corrigée et fournissez une analyse structurée sous le format JSON suivant :
+        
+        {
+            "matiere_et_sujet": "Identifiez la matière et le sujet principal",
+            "principales_erreurs": ["Liste des principales erreurs de l'élève s'il y'en a"],
+            "concepts_cles_mal_compris": ["2-3 concepts clés mal compris par l'élève s'il y'en a"],
+            "points_specifiques": ["3 points spécifiques sur lesquels le tuteur devrait se concentrer si y'a des erreurs"],
+            "activite_concrete": "Une activité concrète pour renforcer la compréhension du concept le plus problématique si y'a des difficultees"
+        }
+        
+        Assurez-vous que votre réponse soit un JSON valide et strictement conforme à la structure donnée ci-dessus.
+        """
+
+    try:
+        client = Anthropic()
+        encoded_image = base64.b64encode(file_object.read()).decode('utf-8')
+
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": encoded_image
+                            }
+                        }
+                    ]
+                }
+            ]
+        )
+
+        try:
+            analysis_result = json.loads(response.content[0].text)
+        except json.JSONDecodeError:
+            analysis_result = {
+                "matiere_et_sujet": "Erreur de format",
+                "principales_erreurs": ["Impossible de structurer la réponse"],
+                "concepts_cles_mal_compris": ["Analyse non structurée"],
+                "points_specifiques": ["Veuillez vérifier la réponse brute"],
+                "activite_concrete": "Pas de suggestion disponible",
+                "reponse_brute": response.content[0].text
+            }
+
+        return analysis_result
+
+    except Exception as e:
+        print(f"Erreur lors de l'analyse de l'image : {str(e)}")
+        return {
+            "matiere_et_sujet": "Erreur d'analyse",
+            "principales_erreurs": ["Impossible d'analyser l'image"],
+            "concepts_cles_mal_compris": ["Analyse non disponible"],
+            "points_specifiques": ["Une erreur est survenue"],
+            "activite_concrete": "Aucune suggestion disponible",
+            "erreur": str(e)
+        }

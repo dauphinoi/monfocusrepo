@@ -758,6 +758,7 @@ function toggleSearch() {
 }
 
 function renderFormattedContent(element, blocks) {
+    console.log('Rendering formatted content:', blocks);
     element.innerHTML = '';
     const contentElement = document.createElement('div');
     contentElement.className = 'message-content';
@@ -765,6 +766,7 @@ function renderFormattedContent(element, blocks) {
     let currentList = null;
 
     blocks.forEach((block, index) => {
+        console.log('Processing block:', block);
         let blockElement;
         switch (block.type) {
             case 'title':
@@ -796,6 +798,7 @@ function renderFormattedContent(element, blocks) {
                 blockElement.innerHTML = `\\[${block.content}\\]`;
                 break;
             default:
+                console.warn('Unknown block type:', block.type);
                 blockElement = document.createElement('p');
                 blockElement.textContent = block.content;
         }
@@ -806,17 +809,19 @@ function renderFormattedContent(element, blocks) {
 
         contentElement.appendChild(blockElement);
 
-        // Ajouter un espace après chaque bloc sauf le dernier
         if (index < blocks.length - 1) {
             contentElement.appendChild(document.createElement('br'));
         }
     });
 
     element.appendChild(contentElement);
+    console.log('Final rendered content:', element.innerHTML);
 
     if (window.MathJax && window.MathJax.typesetPromise) {
         window.MathJax.typesetPromise([element])
             .catch((err) => console.error('MathJax error:', err));
+    } else {
+        console.warn('MathJax not available');
     }
 }
 

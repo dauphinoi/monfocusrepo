@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenue sur monFocusprof</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo img {
+            max-width: 200px;
+        }
+        h1 {
+            color: #1a237e;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .welcome-message {
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .info {
+            background-color: #e8eaf6;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info p {
+            margin: 10px 0;
+        }
+        .cta-button {
+            display: block;
+            width: 200px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255, 0.7) 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 25px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.8) 0%, rgba(124, 77, 255, 0.8) 100%);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #777;
+            font-size: 14px;
+        }
+        .follow-up {
+            background-color: #e0f2f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+            color: #00695c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <img src="https://myfocusbck.s3.amazonaws.com/static/monFocusprof/images/backp2.jpeg" alt="Logo monFocusprof">
+        </div>
+        <h1>Bienvenue sur monFocus</h1>
+        <p class="welcome-message">Bonjour {{ first_name }},</p>
+        <p>Nous sommes ravis de vous accueillir sur monFocus. Votre compte a été créé avec succès !</p>
+        <div class="info">
+            <p><strong>Nom d'utilisateur :</strong> {{ username }}</p>
+            <p><strong>Mot de passe temporaire :</strong> {{ password }}</p>
+        </div>
+        <p>Pour des raisons de sécurité, nous vous recommandons vivement de changer votre mot de passe dès votre première connexion.</p>
+        <a href="https://www.monfocus.fr/accounts/login/" class="cta-button">Se connecter</a>
+        <div class="follow-up">
+            <p>Notre équipe vous contactera dans les prochaines 24 heures pour répondre à vos questions et vous guider dans vos besoins.</p>
+        </div>
+        <div class="footer">
+            <p>Cordialement,<br>L'équipe monFocus</p>
+            <p>Si vous avez des questions urgentes, n'hésitez pas à nous contacter à monfocusacademy@gmail.com</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 from .models import User, Institution
+from .forms import CustomAuthenticationForm
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,8 @@ def institution_selection(request):
         return render(request, 'accounts/institution_selection.html', {'institutions': institutions})
     
     elif request.method == 'POST':
+        # pour le moment on redirige vers la page de login monFocus
+        return redirect(reverse('accounts:login_view'))
         institution_id = request.POST.get('institution_id')
         if not institution_id:
             return HttpResponseBadRequest("Institution non sélectionnée")

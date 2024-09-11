@@ -45,6 +45,10 @@ def index(request):
 
 from django.http import JsonResponse
 
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 def institution_contact_view(request):
     if request.method == 'POST':
         form = InstitutionContactForm(request.POST)
@@ -56,36 +60,41 @@ def institution_contact_view(request):
             institution_type = form.cleaned_data['institution_type']
             message = form.cleaned_data['message']
 
-            send_mail(
+            # Contexte pour les templates d'e-mail
+            context = {
+                'institution_name': institution_name,
+                'contact_name': contact_name,
+                'email': email,
+                'institution_type': institution_type,
+                'message': message,
+            }
+
+            # Email pour l'équipe monFocus
+            team_html_content = render_to_string('monFocusprof/monfocus_team_email.html', context)
+            team_text_content = strip_tags(team_html_content)
+
+            msg_team = EmailMultiAlternatives(
                 f'Nouvelle demande de collaboration de {institution_name}',
-                f"""
-                Nom de l'institution : {institution_name}
-                Nom du contact : {contact_name}
-                Email : {email}
-                Type d'institution : {institution_type}
-                Message : {message}
-                """,
+                team_text_content,
                 settings.DEFAULT_FROM_EMAIL,
-                [settings.DEFAULT_FROM_EMAIL],
-                fail_silently=False,
+                [settings.DEFAULT_FROM_EMAIL]
             )
-            # E-mail de confirmation pour l'institution
-            send_mail(
-                'Confirmation de votre demande de collaboration',
-                f"""
-                Cher/Chère {contact_name},
+            msg_team.attach_alternative(team_html_content, "text/html")
+            msg_team.send()
 
-                Nous vous remercions pour votre demande de collaboration avec {institution_name}.
+            # Email de confirmation pour l'institution (utilisant le template précédemment créé)
+            institution_html_content = render_to_string('monFocusprof/institution_contact_email.html', context)
+            institution_text_content = strip_tags(institution_html_content)
 
-                Nous avons bien reçu votre message et nous vous contacterons dans les plus brefs délais.
-
-                Cordialement,
-                L'équipe de monFocus
-                """,
+            msg_institution = EmailMultiAlternatives(
+                'Confirmation de votre demande de collaboration - monFocus',
+                institution_text_content,
                 settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
+                [email]
             )
+            msg_institution.attach_alternative(institution_html_content, "text/html")
+            msg_institution.send()
+
             return JsonResponse({'success': True})
 
     else:

@@ -215,13 +215,16 @@
             document.body.style.backgroundImage = `url('${backgroundUrl}')`;
         });
 
-document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('institutionContactForm');
     const successModal = document.getElementById('success-modal');
-    const closeBtn = successModal.querySelector('.close');
+    const loadingOverlay = document.getElementById('loadingOverlay');
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
+
+        // Afficher l'overlay de chargement
+        loadingOverlay.style.display = 'flex';
 
         fetch(form.action, {
             method: 'POST',
@@ -232,14 +235,19 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
+            // Cacher l'overlay de chargement
+            loadingOverlay.style.display = 'none';
+
             if (data.success) {
                 successModal.style.display = 'block';
             }
+        })
+        .catch(error => {
+            // Cacher l'overlay de chargement en cas d'erreur
+            loadingOverlay.style.display = 'none';
+            console.error('Error:', error);
+            // Ici, vous pouvez ajouter un code pour gérer les erreurs, par exemple afficher un message d'erreur à l'utilisateur
         });
-    });
-
-    closeBtn.addEventListener('click', function() {
-        successModal.style.display = 'none';
     });
 });
 

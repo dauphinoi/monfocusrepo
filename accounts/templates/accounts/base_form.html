@@ -78,6 +78,39 @@
                 justify-content: center;
             }
         }
+
+        /* loading envoie */
+        .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.loading-animation {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px;
+}
+
+.loading-content p {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
     </style>
 </head>
 <!-- Google tag (gtag.js) -->
@@ -174,10 +207,38 @@
             <a href="#top">Aller en haut <i class="fas fa-arrow-up"></i></a>
         </div>
     </footer>
+
+    <!-- loading -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+          <div class="loading-animation">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#9b59b6;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="40" stroke="url(#grad)" stroke-width="8" fill="none" stroke-linecap="round">
+                <animate attributeName="stroke-dasharray" dur="2s" repeatCount="indefinite" from="0 251.2" to="251.2 0"/>
+                <animateTransform attributeName="transform" type="rotate" dur="2s" repeatCount="indefinite" from="0 50 50" to="360 50 50"/>
+              </circle>
+              <circle cx="50" cy="50" r="20" fill="url(#grad)">
+                <animate attributeName="r" dur="2s" repeatCount="indefinite" values="20;10;20" keyTimes="0;0.5;1"/>
+                <animate attributeName="fill-opacity" dur="2s" repeatCount="indefinite" values="1;0.5;1" keyTimes="0;0.5;1"/>
+              </circle>
+              <text x="50" y="50" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" dominant-baseline="central">
+                F
+                <animate attributeName="font-size" dur="2s" repeatCount="indefinite" values="24;12;24" keyTimes="0;0.5;1"/>
+              </text>
+            </svg>
+          </div>
+          <p>Traitement en cours</p>
+        </div>
+      </div>
     <!-- Modal de succès -->
 <div id="success-modal" class="modal" style="display: none;">
     <div class="modal-content">
-        <span class="close">&times;</span>
         <div class="success-icon">✓</div>
         <h2>Inscription réussie !</h2>
         <p>Votre profil a été créé avec succès.</p>
@@ -193,11 +254,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     const submitButton = document.querySelector('button[type="submit"]');
     const successModal = document.getElementById('success-modal');
-    const closeBtn = successModal.querySelector('.close');
+    const loadingOverlay = document.getElementById('loadingOverlay');
 
     form.addEventListener('submit', function(e) {
         if (submitButton.textContent.trim() === 'Envoyer') {
             e.preventDefault();
+            
+            // Afficher l'overlay de chargement
+            loadingOverlay.style.display = 'flex';
             
             fetch(form.action, {
                 method: 'POST',
@@ -208,23 +272,22 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
+                // Cacher l'overlay de chargement
+                loadingOverlay.style.display = 'none';
+                
                 if (data.success) {
                     successModal.style.display = 'block';
                 }
+            })
+            .catch(error => {
+                // Cacher l'overlay de chargement en cas d'erreur
+                loadingOverlay.style.display = 'none';
+                console.error('Error:', error);
             });
         }
     });
 
-    closeBtn.addEventListener('click', function() {
-        successModal.style.display = 'none';
-    });
-
-    // Fermer le modal si on clique en dehors
-    window.onclick = function(event) {
-        if (event.target == successModal) {
-            successModal.style.display = 'none';
-        }
-    }
+    
 });
 </script>
 </body>

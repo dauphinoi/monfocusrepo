@@ -247,28 +247,40 @@ def parent_form_view(request, step=1):
 def eleve_etudiant_form_view(request, step=1):
     return handle_form_step(request, step, 'eleve_etudiant')
 
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 def send_welcome_email(user, password):
     subject = 'Bienvenue sur monFocusprof'
-    message = f"""
-    Bonjour {user.first_name},
-
-    Votre compte a été créé sur monFocusprof.
-
-    Nom d'utilisateur : {user.username}
-    Mot de passe temporaire : {password}
-
-    Veuillez vous connecter et changer votre mot de passe dès que possible.
-
-    Cordialement,
-    L'équipe monFocusprof
-    """
     from_email = settings.DEFAULT_FROM_EMAIL
-    recipient_list = [user.email]
+    to = user.email
+
+    # Contexte pour le template
+    context = {
+        'first_name': user.first_name,
+        'username': user.username,
+        'password': password,
+    }
+
+    # Rendu du template HTML
+    html_content = render_to_string('accounts/welcome_email_template.html', context)
     
-    send_mail(subject, message, from_email, recipient_list)
+    # Version texte de l'e-mail
+    text_content = strip_tags(html_content)
+
+    # Création de l'e-mail
+    msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
+    msg.attach_alternative(html_content, "text/html")
+    
+    # Envoi de l'e-mail
+    msg.send()
 
 
-# Reinitialiser le mot de passe
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 @api_view(['POST'])
 def reset_password_request(request):
     email = request.data.get('email')
@@ -277,45 +289,33 @@ def reset_password_request(request):
     except User.DoesNotExist:
         return Response({'success': False, 'message': 'Aucun utilisateur trouvé avec cet email.'})
 
-    # Générer le token
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     
-    # Construire le lien de réinitialisation
     reset_link = request.build_absolute_uri(
         reverse('accounts:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
     )
 
-    # Envoyer l'email
+    context = {
+        'first_name': user.first_name,
+        'reset_link': reset_link
+    }
+
     subject = 'Réinitialisation de votre mot de passe monFocusprof'
-    message = f"""
-    Bonjour {user.first_name},
+    html_content = render_to_string('accounts/reset_password_request.html', context)
+    text_content = strip_tags(html_content)
 
-    Vous avez demandé une réinitialisation de votre mot de passe pour votre compte monFocusprof.
-    Cliquez sur le lien suivant pour réinitialiser votre mot de passe :
-
-    {reset_link}
-
-    Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.
-
-    Cordialement,
-    L'équipe monFocusprof
-    """
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+    msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [email])
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
 
     return Response({'success': True, 'message': 'Email de réinitialisation envoyé.'})
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from django.shortcuts import render
 
 @api_view(['GET', 'POST'])
 def reset_password_confirm(request, uidb64, token):
     if request.method == 'GET':
-        # Afficher le formulaire de réinitialisation du mot de passe
         return render(request, 'accounts/reset_password_confirm.html', {'uidb64': uidb64, 'token': token})
     elif request.method == 'POST':
-        # Traiter la soumission du formulaire
         try:
             uid = force_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(pk=uid)
@@ -328,20 +328,17 @@ def reset_password_confirm(request, uidb64, token):
                 user.set_password(new_password)
                 user.save()
                 
-                # Envoyer un email de confirmation
+                context = {
+                    'first_name': user.first_name
+                }
+
                 subject = 'Votre mot de passe monFocusprof a été modifié'
-                message = f"""
-                Bonjour {user.first_name},
+                html_content = render_to_string('accounts/reset_password_confirm_email.html', context)
+                text_content = strip_tags(html_content)
 
-                Votre mot de passe monFocusprof a été réinitialisé avec succès.
-                Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
-
-                Si vous n'avez pas effectué cette modification, veuillez contacter immédiatement notre support.
-
-                Cordialement,
-                L'équipe monFocusprof
-                """
-                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+                msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [user.email])
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
                 
                 return Response({'success': True, 'message': 'Mot de passe réinitialisé avec succès.'})
             else:
