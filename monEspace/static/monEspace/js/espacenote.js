@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initSidebar();
     toggleView('courses');
     checkPendingTodos();
+    showStaticSVG();
 
     function initTinyMCE() {
         tinymce.init({
@@ -659,6 +660,17 @@ function toggleSearch() {
         }
     }
 
+
+    function showAnimatedSVG() {
+    document.getElementById('animatedSVG').style.display = 'inline-block';
+    document.getElementById('staticSVG').style.display = 'none';
+}
+
+    function showStaticSVG() {
+        document.getElementById('animatedSVG').style.display = 'none';
+        document.getElementById('staticSVG').style.display = 'inline-block';
+    }
+
     async function handleChatSubmit(event = null) {
     const chatInput = document.getElementById('chatInput');
     let messageContent;
@@ -682,6 +694,7 @@ function toggleSearch() {
     chatInput.value = '';
 
     try {
+        showAnimatedSVG(); // Afficher le SVG animé au début de la génération de la réponse
         if (!currentSessionId) {
             console.log("Pas de session active, démarrage d'une nouvelle session");
             await startNewChatSession();
@@ -750,6 +763,8 @@ function toggleSearch() {
 
         addMessageToHistory('ai', aiResponseContent, source);
         finalizeAIMessageInUI(aiResponseContent, source, blocks);
+
+        showStaticSVG(); // Afficher le SVG statique une fois la réponse générée
 
     } catch (error) {
         console.error('Erreur lors de l\'envoi du message:', error);
