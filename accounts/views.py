@@ -260,7 +260,7 @@ def send_welcome_email(user, password):
     context = {
         'first_name': user.first_name,
         'username': user.username,
-        'password': password,
+        'password': 'Baba0453534#',
     }
 
     # Rendu du template HTML
@@ -332,7 +332,7 @@ def reset_password_confirm(request, uidb64, token):
                     'first_name': user.first_name
                 }
 
-                subject = 'Votre mot de passe monFocusprof a été modifié'
+                subject = 'Votre mot de passe monFocus a été modifié'
                 html_content = render_to_string('accounts/reset_password_confirm_email.html', context)
                 text_content = strip_tags(html_content)
 
