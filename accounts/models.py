@@ -114,36 +114,6 @@ class Teacher(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
-    
-    def save(self, *args, **kwargs):
-        try:
-            if not self.pk and not self.user:  # New Teacher without a User
-                username = slugify(f"{self.first_name}.{self.last_name}").lower()
-                try:
-                    self.user = User.objects.create_user(
-                        username=username,
-                        email=self.email,
-                        password=User.objects.make_random_password(),
-                        first_name=self.first_name,
-                        last_name=self.last_name
-                    )
-                except IntegrityError:
-                    # Handle username collision
-                    username = f"{username}{User.objects.count()}"
-                    self.user = User.objects.create_user(
-                        username=username,
-                        email=self.email,
-                        password=User.objects.make_random_password(),
-                        first_name=self.first_name,
-                        last_name=self.last_name
-                    )
-            elif self.user:  # Existing Teacher
-                self.user.email = self.email  # Update email
-                self.user.save()
-            super(Teacher, self).save(*args, **kwargs)
-        except Exception as e:
-            # Handle other exceptions or log errors
-            pass
 
 class Subject(models.Model):
     id = models.AutoField(primary_key=True, unique=True)
@@ -193,27 +163,6 @@ class Visitor(models.Model):
 
     def __str__(self):
         return f"{self.profile_type} - {self.first_name} {self.last_name}"
-
-    def save(self, *args, **kwargs):
-        if not self.user:
-            # Créer un utilisateur associé si aucun n'existe
-            username = self.email  # Utiliser l'email comme nom d'utilisateur
-            try:
-                self.user = User.objects.create_user(
-                    username=username,
-                    email=self.email,
-                    password=User.objects.make_random_password(),
-                    first_name=self.first_name,
-                    last_name=self.last_name
-                )
-            except IntegrityError:
-                # Gérer le cas où l'utilisateur existe déjà
-                self.user = User.objects.get(email=self.email)
-                self.user.first_name = self.first_name
-                self.user.last_name = self.last_name
-                self.user.save()
-
-        super().save(*args, **kwargs)
 
     def get_courses(self):
         return VisitorSubjectCourse.objects.filter(visitor=self)

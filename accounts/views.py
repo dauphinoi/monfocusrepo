@@ -1,3 +1,4 @@
+import random
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
@@ -24,9 +25,11 @@ from django.urls import reverse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-def generate_password(length=10):
-    characters = string.ascii_letters + string.digits + string.punctuation
-    return 'Baba0453534#'
+def generate_password():
+    characters = string.ascii_letters + string.digits
+    password = ''.join(random.choice(characters) for i in range(8))
+    return password
+        
 
 @never_cache
 @csrf_protect
@@ -101,10 +104,11 @@ def postuler(request, step=1):
                     
                     # Create user and link to teacher
                     username = f"{form.cleaned_data['prenom']}.{form.cleaned_data['nom']}".lower()
+                    p=generate_password()
                     user = User.objects.create_user(
                         username=username,
                         email=form.cleaned_data['email'],
-                        password=generate_password(),
+                        password=p,
                         first_name=form.cleaned_data['prenom'],
                         last_name=form.cleaned_data['nom']
                     )
@@ -139,7 +143,7 @@ def postuler(request, step=1):
                         print(f"Attention : Les sujets avec les IDs {missing_ids} n'existent pas.")
 
                     #send email
-                    send_welcome_email(user, 'Baba0453534#')    
+                    send_welcome_email(user, p)    
                 # Clear session data
                 for key in ['profile_type', 'subjects', 'niveaux', 'bac3', 'cv', 'dernier_diplome']:
                     request.session.pop(key, None)
@@ -191,10 +195,11 @@ def handle_form_step(request, step, form_type):
                         phone_number=form.cleaned_data.get('telephone', ''),
                         city_or_postal_code=form.cleaned_data['ville_ou_code_postal']
                     )
+                    p = generate_password()
                     user = User.objects.create_user(
                         username=email,
                         email=email,
-                        password=generate_password(),
+                        password=p,
                         first_name=visitor.first_name,
                         last_name=visitor.last_name
                     )
@@ -218,8 +223,7 @@ def handle_form_step(request, step, form_type):
                             )
 
                 # Envoyer un email avec les informations de connexion
-                password = visitor.user.password  # Le mot de passe généré automatiquement
-                send_welcome_email(visitor.user, password)
+                send_welcome_email(visitor.user, p)
                 
                 # Réinitialiser la session
                 request.session[session_key] = 1
@@ -252,7 +256,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
 def send_welcome_email(user, password):
-    subject = 'Bienvenue sur monFocusprof'
+    subject = 'Bienvenue sur monFocus'
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
 
@@ -260,7 +264,7 @@ def send_welcome_email(user, password):
     context = {
         'first_name': user.first_name,
         'username': user.username,
-        'password': 'Baba0453534#',
+        'password': password,
     }
 
     # Rendu du template HTML
@@ -301,7 +305,7 @@ def reset_password_request(request):
         'reset_link': reset_link
     }
 
-    subject = 'Réinitialisation de votre mot de passe monFocusprof'
+    subject = 'Réinitialisation de votre mot de passe monFocus'
     html_content = render_to_string('accounts/reset_password_request.html', context)
     text_content = strip_tags(html_content)
 
