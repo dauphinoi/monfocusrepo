@@ -36,10 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Éléments DOM fréquemment utilisés
     const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-    const resetPasswordBtn = document.getElementById('resetPasswordBtn');
-    const resetPasswordModal = document.getElementById('resetPasswordModal');
-    const cancelResetBtn = document.getElementById('cancelReset');
-    const resetPasswordForm = document.getElementById('resetPasswordForm');
 
     // Initialisation
     if (!currentCourseId && dataCache.courses.length > 0) {
@@ -87,6 +83,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setupEventListeners() {
 
+    // Masquer les sections de notes et le bouton de création au chargement initial
+    document.getElementById('newNoteBtn').style.display = 'none';
+    document.getElementById('allNotesSection').style.display = 'none';
+    document.getElementById('recentNotesSection').style.display = 'none';
+
    // Gestion des clics en dehors des overlays
    document.addEventListener('mousedown', function(event) {
     const searchOverlay = document.getElementById('searchOverlay');
@@ -116,17 +117,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('[data-tab="upcoming"]').addEventListener('click', showUpcomingHomework);
         document.querySelector('[data-tab="past"]').addEventListener('click', showPastHomework);
         
-        // Gestion du mot de passe
-        resetPasswordBtn.addEventListener('click', () => resetPasswordModal.style.display = 'block');
-        cancelResetBtn.addEventListener('click', () => resetPasswordModal.style.display = 'none');
-        resetPasswordForm.addEventListener('submit', handleResetPasswordSubmit);
-        
-        // Fermeture du modal de réinitialisation du mot de passe
-        window.addEventListener('click', (event) => {
-            if (event.target === resetPasswordModal) {
-                resetPasswordModal.style.display = 'none';
-            }
-        });
 
         // Gestion de l'interface principale
         toggleSidebarBtn.addEventListener('click', toggleSidebar);
@@ -185,34 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     }
 
-    async function handleResetPasswordSubmit(e) {
-        e.preventDefault();
-        const email = document.getElementById('emailInput').value;
-        
-        try {
-            const response = await fetch('/accounts/reset-password/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken(),
-                },
-                body: JSON.stringify({ email: email }),
-            });
-    
-            const data = await response.json();
-            if (data.success) {
-                alert('Un email de réinitialisation a été envoyé à ' + email);
-            } else {
-                alert('Erreur : ' + data.message);
-            }
-        } catch (error) {
-            console.error('Erreur lors de la demande de réinitialisation:', error);
-            alert('Une erreur est survenue lors de la demande de réinitialisation.');
-        }
-    
-        resetPasswordModal.style.display = 'none';
-    }
-
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const mainContent = document.querySelector('.main-content');
@@ -235,12 +197,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showCourseView() {
-        toggleView('courses');
-        dataCache.recentNotes = [];
-        selectedNote = null;
-        currentCourseId = null;
-        document.getElementById('currentCourseTitle').textContent = '';
-    }
+    toggleView('courses');
+    dataCache.recentNotes = [];
+    selectedNote = null;
+    currentCourseId = null;
+    document.getElementById('currentCourseTitle').textContent = '';
+    document.getElementById('allNotesList').innerHTML = '';
+    document.getElementById('recentNotesList').innerHTML = '';
+    document.getElementById('allNotesSection').style.display = 'none';
+    document.getElementById('recentNotesSection').style.display = 'none';
+}
 
     function confirmDeleteNote() {
         if (selectedNote) {
@@ -303,8 +269,10 @@ document.addEventListener('DOMContentLoaded', function() {
     renderNotes(courseId);
     updateCurrentCourseTitle(courseName || 'Cours sans nom');
     toggleView('notes');
-    // await fetchTodos(courseId);
-    // await checkPendingTodos();
+    // Afficher les sections de notes et le bouton de création
+    document.getElementById('newNoteBtn').style.display = 'block';
+    document.getElementById('allNotesSection').style.display = 'block';
+    document.getElementById('recentNotesSection').style.display = 'block';
 }
 
     function updateRecentNotes(courseId) {
@@ -486,23 +454,35 @@ function renderNotes(courseId) {
         toggleSidebarBtn: document.getElementById('toggleSidebarBtn'),
         courseGrid: document.getElementById('courseGrid'),
         noteContent: document.getElementById('noteContent'),
-        allNotesList: document.getElementById('allNotesList'),
+        allNotesSection: document.getElementById('allNotesSection'),
         todoSidebar: document.getElementById('todoSidebar'),
         noteTitle: document.getElementById('noteTitle'),
-        recentNotesList: document.getElementById('recentNotesList')
+        recentNotesSection: document.getElementById('recentNotesSection'),
+        newNoteBtn: document.getElementById('newNoteBtn')
     };
 
     const viewConfigs = {
-        courses: { show: ['courseGrid'], hide: ['noteContent', 'allNotesList', 'todoSidebar', 'noteTitle', 'recentNotesList'] },
-        notes: { show: ['allNotesList', 'recentNotesList'], hide: ['courseGrid', 'noteContent', 'todoSidebar'] },
-        editor: { show: ['noteContent', 'allNotesList', 'recentNotesList'], hide: ['courseGrid', 'todoSidebar'] }
+        courses: { 
+            show: ['courseGrid'], 
+            hide: ['noteContent', 'allNotesSection', 'todoSidebar', 'noteTitle', 'recentNotesSection', 'newNoteBtn']
+        },
+        notes: { 
+            show: ['allNotesSection', 'recentNotesSection', 'newNoteBtn'], 
+            hide: ['courseGrid', 'noteContent', 'todoSidebar'] 
+        },
+        editor: { 
+            show: ['noteContent', 'allNotesSection', 'recentNotesSection', 'newNoteBtn'], 
+            hide: ['courseGrid', 'todoSidebar'] 
+        }
     };
 
     Object.entries(elements).forEach(([key, element]) => {
-        if (viewConfigs[view].show && viewConfigs[view].show.includes(key)) {
-            element.style.display = key === 'courseGrid' ? 'grid' : 'block';
-        } else if (viewConfigs[view].hide && viewConfigs[view].hide.includes(key)) {
-            element.style.display = 'none';
+        if (element) {
+            if (viewConfigs[view].show && viewConfigs[view].show.includes(key)) {
+                element.style.display = key === 'courseGrid' ? 'grid' : 'block';
+            } else if (viewConfigs[view].hide && viewConfigs[view].hide.includes(key)) {
+                element.style.display = 'none';
+            }
         }
     });
 

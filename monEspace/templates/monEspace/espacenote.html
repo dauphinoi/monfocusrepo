@@ -677,7 +677,7 @@
             <div class="sidebar-top">
 
                 <button class="new-button" id="newNoteBtn">
-                    <span class="icon">+</span> New
+                    <span class="icon">+</span> Nouvelle note
                 </button>
                 
                 <button id="searchBtn"><span class="icon">🔍</span></button>
@@ -685,16 +685,13 @@
                     <span class="icon-button">🤖</span>
                 </button>
             </div>
-            <div class="recent-notes">
+            <div id="recentNotesSection" class="recent-notes">
                 <h3>Notes récentes</h3>
                 <div id="recentNotesList"></div>
             </div>
-            <div class="note-list">
+            <div id="allNotesSection" class="note-list">
                 <h3>Toutes mes Notes</h3>
                 <div id="allNotesList"></div>
-            </div>
-            <div class="settings">
-                <button id="resetPasswordBtn">🔑 Réinitialiser le mot de passe</button>
             </div>
         </div>
         <div class="main-content">
@@ -912,20 +909,6 @@
         </div>
     </div>
 
-
-     <!-- Modal de pour mdp -->
-     <div id="resetPasswordModal" class="modal">
-        <div class="modal-content">
-          <h2>Réinitialise ton mot de passe</h2>
-          <p>Renseigne l'adresse email de votre compte, nous t'enverrons un lien pour que tu puisse choisir un nouveau mot de passe.</p>
-          <form id="resetPasswordForm">
-            <label for="emailInput">Email associé à ton compte</label>
-            <input type="email" id="emailInput" placeholder="Tape ton email ici" required>
-            <button type="submit" class="submit-btn">Réinitialiser mon mot de passe</button>
-          </form>
-          <button id="cancelReset" class="cancel-btn">J'ai retrouvé mon mot de passe</button>
-        </div>
-      </div>
       <!-- loading -->
       <div id="loadingOverlay" class="loading-overlay" style="display: none;">
         <div class="loading-content">
