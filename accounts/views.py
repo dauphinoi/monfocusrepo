@@ -99,7 +99,7 @@ def postuler(request, step=1):
                         status=request.session['profile_type'],
                         has_bac_plus_trois=request.session.get('bac3', False),
                         highest_degree_earned=request.session.get('dernier_diplome', ''),
-                        cv=request.session.get('cv')
+                        # cv=request.session.get('cv')
                     )
                     
                     # Create user and link to teacher

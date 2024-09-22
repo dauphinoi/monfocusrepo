@@ -13,7 +13,7 @@
         const tinymceApiKey = "tt0v5khcsqrekvlsszd48e3dxdlfz1jxwrf4xbbq9iabp6ht";
         var coursesData = JSON.parse('{{ courses_data|safe }}');
     </script>
-    <script src="{% static 'monEspace/js/espaceteach.js' %}"></script>
+    <script src="{% static 'monEspace/js/espacenote.js' %}"></script>
 
     <style>
 .todo-sidebar {
@@ -283,65 +283,6 @@
     }
 }
 
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    overflow: auto;
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 15% auto;
-    padding: 20px;
-    border-radius: 8px;
-    width: 80%;
-    max-width: 500px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.modal h2 {
-    margin-top: 0;
-    color: #333;
-}
-
-.modal p {
-    color: #666;
-    margin-bottom: 20px;
-}
-
-#resetPasswordForm {
-    display: flex;
-    flex-direction: column;
-}
-
-#resetPasswordBtn{
-    background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255, 0.7) 100%);
-}
-
-#resetPasswordForm label {
-    margin-bottom: 5px;
-    color: #333;
-}
-
-#resetPasswordForm input,
-#resetPasswordForm button,
-#cancelReset {
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-}
-
-#resetPasswordForm input:focus {
-    outline: none;
-    border-color: #4CAF50;
-}
 
 .submit-btn {
     background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255, 0.7) 100%);
@@ -470,24 +411,11 @@ background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255
         <button id="toggleSidebarBtn" class="toggle-sidebar-btn">☰</button>
         <div class="sidebar">
             <div class="sidebar-top">
-                <button class="new-button" id="newNoteBtn">
-                    <span class="icon">+</span> New
-                </button>
-                <!-- <button id="searchBtn"><span class="icon">🔍</span></button>
-                <button id="chatBtn">
-                    <img src="{% static 'monEspace/images/roboticone.webp' %}" alt="AI Chat" class="icon-button">
-                </button> -->
+                <button id="newNoteBtn" class="icon">+ Nouvelle note</button>
             </div>
-            <div class="recent-notes">
-                <h3>Notes récentes</h3>
-                <div id="recentNotesList"></div>
-            </div>
-            <div class="note-list">
-                <h3>Toutes les Notes</h3>
+            <div id="allNotesSection" class="note-list" style="display: none;">
+                <h2 id="currentCourseTitle"></h2>
                 <div id="allNotesList"></div>
-            </div>
-            <div class="settings">
-                <button id="resetPasswordBtn">🔑 Réinitialiser le mot de passe</button>
             </div>
         </div>
         <div class="main-content">
@@ -610,20 +538,6 @@ background: linear-gradient(135deg, rgba(26, 35, 126, 0.7) 0%, rgba(124, 77, 255
             <button id="closeMediaBtn" class="close-button">Fermer</button>
         </div>
     </div>
-    
-    <!-- Modal de pour mdp -->
-    <div id="resetPasswordModal" class="modal">
-        <div class="modal-content">
-          <h2>Réinitialise ton mot de passe</h2>
-          <p>Renseigne l'adresse email de votre compte, nous t'enverrons un lien pour que tu puisse choisir un nouveau mot de passe.</p>
-          <form id="resetPasswordForm">
-            <label for="emailInput">Email associé à ton compte</label>
-            <input type="email" id="emailInput" placeholder="Tape ton email ici" required>
-            <button type="submit" class="submit-btn">Réinitialiser mon mot de passe</button>
-          </form>
-          <button id="cancelReset" class="cancel-btn">J'ai retrouvé mon mot de passe</button>
-        </div>
-      </div>
 
     <input type="file" id="fileInput" style="display: none;">
 

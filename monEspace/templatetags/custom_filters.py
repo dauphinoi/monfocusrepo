@@ -22,6 +22,10 @@ def get_subject_icon(subject_name):
         'Espagnol': '🇪🇸',
         'SVT/Biologie': '🧬',
         'SVT': '🧬',
-        'Cours de musique': '🎵'
+        'Cours de musique': '🎵',
+        'Cours de dessin': '🎨',
+        'Cours de théâtre': '🎭',
+        'Informatique': '💻',
+        'Méthodologie': '📝',
     }
     return mark_safe(icons.get(subject_name, '📚'))

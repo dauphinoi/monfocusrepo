@@ -5,6 +5,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from accounts.models import Teacher, VisitorSubjectCourse
 import numpy as np
+from monFocus.storage_backends import MediaStorage
+from django.conf import settings
+from django.utils import timezone
 
 class Note(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -25,8 +28,7 @@ class Note(models.Model):
         return self.title
 
 
-from monFocus.storage_backends import MediaStorage
-from django.conf import settings
+
 def attachment_file_path(instance, filename):
     # Utilise le note_id comme dossier
     return f'media/image/{instance.note.id}/{filename}'
@@ -58,15 +60,6 @@ class TodoItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     completed = models.BooleanField(default=False)
 
-class HourDeclaration(models.Model):
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    course = models.ForeignKey(VisitorSubjectCourse, on_delete=models.CASCADE)
-    date = models.DateField()
-    duration = models.DurationField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-date', '-created_at']
 
 # Dans models.py
 
@@ -88,7 +81,7 @@ class ChatMessage(models.Model):
     related_note = models.ForeignKey(Note, on_delete=models.SET_NULL, null=True, blank=True)
 
 # Gestion des Homeworks
-from django.utils import timezone
+
 
 class Homework(models.Model):
     course = models.ForeignKey(VisitorSubjectCourse, on_delete=models.CASCADE, related_name='homeworks')

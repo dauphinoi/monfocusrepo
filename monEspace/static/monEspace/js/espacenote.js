@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
         courses: coursesData,
         allNotes: [],
         courseNotes: {},
-        recentNotes: [],
         todos: {},
         homework: {}
     };
@@ -86,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Masquer les sections de notes et le bouton de création au chargement initial
     document.getElementById('newNoteBtn').style.display = 'none';
     document.getElementById('allNotesSection').style.display = 'none';
-    document.getElementById('recentNotesSection').style.display = 'none';
 
    // Gestion des clics en dehors des overlays
    document.addEventListener('mousedown', function(event) {
@@ -203,9 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
     currentCourseId = null;
     document.getElementById('currentCourseTitle').textContent = '';
     document.getElementById('allNotesList').innerHTML = '';
-    document.getElementById('recentNotesList').innerHTML = '';
     document.getElementById('allNotesSection').style.display = 'none';
-    document.getElementById('recentNotesSection').style.display = 'none';
 }
 
     function confirmDeleteNote() {
@@ -229,7 +225,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (response.ok) {
                 dataCache.courseNotes[currentCourseId] = dataCache.courseNotes[currentCourseId].filter(note => note.id !== noteId);
-                updateRecentNotes(currentCourseId);
                 
                 if (dataCache.recentNotes.length > 0) {
                     selectNote(dataCache.recentNotes[0]);
@@ -265,26 +260,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     currentCourseId = courseId;
-    updateRecentNotes(courseId);
     renderNotes(courseId);
     updateCurrentCourseTitle(courseName || 'Cours sans nom');
     toggleView('notes');
     // Afficher les sections de notes et le bouton de création
     document.getElementById('newNoteBtn').style.display = 'block';
     document.getElementById('allNotesSection').style.display = 'block';
-    document.getElementById('recentNotesSection').style.display = 'block';
-}
-
-    function updateRecentNotes(courseId) {
-    if (!dataCache.courseNotes[courseId] || !Array.isArray(dataCache.courseNotes[courseId])) {
-        console.warn(`No notes found for course ${courseId}`);
-        dataCache.recentNotes = [];
-    } else {
-        dataCache.recentNotes = dataCache.courseNotes[courseId]
-            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-            .slice(0, 5);
-    }
-    renderRecentNotes();
 }
 
     function renderNotes(courseId) {
@@ -327,7 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
         await fetchCourseNotes(currentCourseId, findCourseById(currentCourseId)?.subject_name || 'Cours sans nom');
     }
     
-    updateRecentNotes(currentCourseId);
     toggleView('editor');
 }
 
@@ -392,7 +372,6 @@ function findCourseById(courseId) {
             dataCache.courseNotes[currentCourseId].push(savedNote);
             
             // Mise à jour de l'interface
-            updateRecentNotes(currentCourseId);
             renderNotes(currentCourseId);
             selectNote(savedNote);
             toggleView('editor');
@@ -439,7 +418,6 @@ function renderNotes(courseId) {
                     dataCache.courseNotes[currentCourseId].push(savedNote);
                 }
                 selectedNote = savedNote;
-                updateRecentNotes(currentCourseId);
                 renderNotes(currentCourseId);
                 alert('Note sauvegardée avec succès');
             } catch (error) {
@@ -457,21 +435,20 @@ function renderNotes(courseId) {
         allNotesSection: document.getElementById('allNotesSection'),
         todoSidebar: document.getElementById('todoSidebar'),
         noteTitle: document.getElementById('noteTitle'),
-        recentNotesSection: document.getElementById('recentNotesSection'),
         newNoteBtn: document.getElementById('newNoteBtn')
     };
 
     const viewConfigs = {
         courses: { 
             show: ['courseGrid'], 
-            hide: ['noteContent', 'allNotesSection', 'todoSidebar', 'noteTitle', 'recentNotesSection', 'newNoteBtn']
+            hide: ['noteContent', 'allNotesSection', 'todoSidebar', 'noteTitle', 'newNoteBtn']
         },
         notes: { 
-            show: ['allNotesSection', 'recentNotesSection', 'newNoteBtn'], 
+            show: ['allNotesSection', 'newNoteBtn'], 
             hide: ['courseGrid', 'noteContent', 'todoSidebar'] 
         },
         editor: { 
-            show: ['noteContent', 'allNotesSection', 'recentNotesSection', 'newNoteBtn'], 
+            show: ['noteContent', 'allNotesSection', 'newNoteBtn'], 
             hide: ['courseGrid', 'todoSidebar'] 
         }
     };
@@ -877,7 +854,7 @@ function finalizeAIMessageInUI(content, source, blocks) {
 
     renderFormattedContent(aiMessageElement, blocks);
 
-    if (source) {
+    if (false) {
         const sourceElement = document.createElement('p');
         sourceElement.className = 'source';
         sourceElement.innerHTML = `<a href="#" data-note-id="${source}">Source (Note)</a>`;
@@ -942,7 +919,7 @@ function renderAIMessage(content, source) {
     const blocks = parseContent(content);
     renderFormattedContent(messageElement, blocks);
     
-    if (source) {
+    if (false) {
         const sourceElement = document.createElement('p');
         sourceElement.className = 'source';
         sourceElement.innerHTML = `<a href="#" data-note-id="${source}">Source (Note)</a>`;
@@ -1175,10 +1152,6 @@ function renderAIMessage(content, source) {
         searchResultsContainer.appendChild(li);
     });
 }
-
-    function updateCurrentCourseTitle(courseName) {
-        document.getElementById('currentCourseTitle').textContent = courseName;
-    }
 
     function getCsrfToken() {
         return document.cookie.split('; ')
@@ -1589,23 +1562,28 @@ async function checkPendingTodos() {
      
     function getSubjectIcon(subjectName) {
         const icons = {
-            'Mathématiques': '🧮',
-            'Français': '📚',
-            'Anglais': '🇬🇧',
-            'Physique': '⚛️',
-            'Chimie': '🧪',
-            'Aide aux devoirs': '📝',
-            'Allemand': '🇩🇪',
-            'Comptabilité': '💼',
-            'Droit': '⚖️',
-            'Économie': '📊',
-            'Histoire': '🏛️',
-            'Coaching': '🏆',
-            'Orientation': '🧭',
-            'Espagnol': '🇪🇸',
-            'SVT/Biologie': '🧬',
-            'Cours de musique': '🎵'
-        };
+        'Mathématiques': '🧮',
+        'Français': '📚',
+        'Anglais': '🇬🇧',
+        'Physique': '⚛️',
+        'Chimie': '🧪',
+        'Aide aux devoirs': '📝',
+        'Allemand': '🇩🇪',
+        'Comptabilité': '💼',
+        'Droit': '⚖️',
+        'Économie': '📊',
+        'Histoire': '🏛️',
+        'Coaching': '🏆',
+        'Orientation': '🧭',
+        'Espagnol': '🇪🇸',
+        'SVT/Biologie': '🧬',
+        'SVT': '🧬',
+        'Cours de musique': '🎵',
+        'Cours de dessin': '🎨',
+        'Cours de théâtre': '🎭',
+        'Informatique': '💻',
+        'Méthodologie': '📝',
+    };
         return `<div class="subject-icon">${icons[subjectName] || '📚'}</div>`;
     }
 

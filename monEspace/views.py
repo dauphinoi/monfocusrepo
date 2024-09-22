@@ -6,7 +6,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import ChatMessage, ChatSession, Homework, HourDeclaration, Note, Attachment, TodoItem
+from .models import ChatMessage, ChatSession, Homework, Note, Attachment, TodoItem
 from .serializers import HomeworkSerializer, NoteSerializer, AttachmentSerializer, TodoItemSerializer
 from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication
@@ -47,7 +47,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 api_key = os.getenv('openai_API_KEY')
-hf_token = os.getenv('HF_TOKEN')
 tinymceApiKey = os.getenv('tinymceApiKey')
 
 class TodoItemViewSet(viewsets.ModelViewSet):
