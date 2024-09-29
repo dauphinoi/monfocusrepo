@@ -70,7 +70,7 @@ class ChatViewSet(viewsets.ViewSet):
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=messages,
-                max_tokens=600,
+                max_tokens=1000,
                 temperature=0.7,
                 stream=True
             )
@@ -99,7 +99,7 @@ class ChatViewSet(viewsets.ViewSet):
 
     1. Utiliser le français.
     2. Se baser sur les notes de cours fournies.
-    3. Poser au maximum 2 questions à la fois pour encourager la réflexion.
+    3. Poser au maximum une question à la fois pour encourager la réflexion.
     4. Être concis : formuler les questions en 1 phrase maximum.
     5. Si l'élève est bloqué, le guider progressivement avec une question plus simple ou un indice sous forme de question, en faisant référence aux notes de cours.
     6. Encourager la réflexion en demandant d'expliquer le raisonnement ou de développer les idées en lien avec le contenu des notes.
