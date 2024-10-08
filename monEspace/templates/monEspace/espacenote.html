@@ -13,7 +13,7 @@
         const tinymceApiKey = "tt0v5khcsqrekvlsszd48e3dxdlfz1jxwrf4xbbq9iabp6ht";
         var coursesData = JSON.parse('{{ courses_data|safe }}');
     </script>
-  <script src="{% static 'monEspace/js/espacenote.js' %}"></script>
+    <script src="{% static 'monEspace/js/espacenote.js' %}"></script>
     <script>
         MathJax = {
           tex: {
@@ -658,6 +658,24 @@
   font-weight: bold;
 }
 
+/* Styles le bouton finir taches */
+
+.finish-task-btn {
+    flex: 0 1 auto;
+    margin: 0 10px;
+    padding: 8px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.finish-task-btn:hover {
+    background-color: #45a049;
+}
 
     </style>
 </head>
@@ -804,6 +822,7 @@
                     </svg>
                 </div>
             </div>
+            <button id="finishTaskBtn" class="finish-task-btn">Finir la tâche en cours</button>
             <button id="closeChatBtn" class="close-button">×</button>
         </div>
         <div id="chatMessages" class="chat-messages">

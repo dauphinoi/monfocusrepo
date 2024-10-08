@@ -68,6 +68,7 @@ class ChatSession(models.Model):
     course = models.ForeignKey(VisitorSubjectCourse, on_delete=models.CASCADE, null=True, blank=True)
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
+    is_task_session = models.BooleanField(default=False)
 
 class ChatMessage(models.Model):
     ROLE_CHOICES = (

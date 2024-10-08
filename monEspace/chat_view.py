@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -7,9 +8,15 @@ from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from openai import OpenAI
 import os
+from rest_framework import status
 import json
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.core.mail import send_mail
 
-from .models import ChatMessage, ChatSession, Note
+from accounts.models import VisitorSubjectCourse
+
+from .models import ChatMessage, ChatSession, Note, TodoItem
 
 from .services import semantic_search
 
@@ -148,9 +155,10 @@ class ChatViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['POST'])
     def start_session(self, request):
         course_id = request.data.get('course_id')
+        is_task_session = request.data.get('is_task_session', False)
         user = request.user
         
-        chat_session = ChatSession.objects.create(user=user, course_id=course_id)
+        chat_session = ChatSession.objects.create(user=user, course_id=course_id, is_task_session=is_task_session)
         
         return Response({
             "session_id": chat_session.id,
@@ -168,3 +176,70 @@ class ChatViewSet(viewsets.ViewSet):
             return Response({"message": "Session de chat terminée avec succès"})
         except ChatSession.DoesNotExist:
             return Response({"error": "Session de chat non trouvée"}, status=404)
+
+    @action(detail=False, methods=['POST'])
+    def generate_report(self, request):
+        session_id = request.data.get('session_id')
+        todo_id = request.data.get('todo_id')
+        user = request.user
+
+        try:
+            chat_session = ChatSession.objects.get(id=session_id, user=user, is_task_session=True)
+            todo_item = TodoItem.objects.select_related(
+                'created_by',
+                'course__subject',
+                'course__cours_type',
+                'course__teacher__user'
+            ).get(id=todo_id)
+        except (ChatSession.DoesNotExist, TodoItem.DoesNotExist):
+            return Response({"error": "Session de tâche ou tâche non trouvée"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Vérifier les permissions
+        if not self.can_delete_todo(user, todo_item):
+            return Response({"error": "Vous n'êtes pas autorisé à supprimer cette tâche"}, status=status.HTTP_403_FORBIDDEN)
+
+        messages = chat_session.messages.all().order_by('timestamp')
+
+        teacher = todo_item.course.teacher
+        if not teacher:
+            return Response({"error": "Aucun enseignant associé à ce cours"}, status=status.HTTP_400_BAD_REQUEST)
+
+        context = {
+            'student_name': f"{user.first_name} {user.last_name}",
+            'date': chat_session.started_at.strftime("%d/%m/%Y"),
+            'course_name': f"{todo_item.course.subject.name} - {todo_item.course.cours_type.name}",
+            'task_content': todo_item.content,
+            'messages': messages,
+            'teacher_name': f"{teacher.user.first_name} {teacher.user.last_name}"
+        }
+
+        html_content = render_to_string('monEspace/task_report.html', context)
+        
+        teacher_email = teacher.user.email
+        subject = f"Rapport de tâche - {user.first_name} {user.last_name} - {todo_item.course.subject.name}"
+        plain_message = strip_tags(html_content)
+        from_email = settings.DEFAULT_FROM_EMAIL
+
+        try:
+            send_mail(subject, plain_message, from_email, [teacher_email], html_message=html_content)
+            email_sent = True
+        except Exception as e:
+            print(f"Erreur lors de l'envoi de l'email : {str(e)}")
+            email_sent = False
+
+        # Supprimer la tâche
+        todo_item.delete()
+
+        return Response({
+            "report_html": html_content,
+            "message": "Rapport généré avec succès" + (" et envoyé à l'enseignant" if email_sent else " mais non envoyé"),
+            "task_deleted": True,
+            "task_id": todo_id
+        }, status=status.HTTP_200_OK)
+
+    def can_delete_todo(self, user, todo_item):
+        if hasattr(user, 'teacher'):
+            return todo_item.course.teacher == user.teacher
+        elif hasattr(user, 'visitor'):
+            return todo_item.course.visitor == user.visitor
+        return False

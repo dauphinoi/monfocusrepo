@@ -91,6 +91,42 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('closeMediaBtn').addEventListener('click', closeMediaOverlay);
         document.getElementById('fileInput').addEventListener('change', handleFileUpload);
         document.getElementById('courseViewBtn').addEventListener('click', showCourseView);
+        document.getElementById('addTodoBtn').addEventListener('click', () => {
+            const todoInput = document.getElementById('newTodoInput');
+            const content = todoInput.value.trim();
+            if (content) {
+                addTodo(content);
+                todoInput.value = '';
+            }
+        });
+
+        async function addTodo(content) {
+            if (!currentCourseId) {
+                alert("Veuillez d'abord sélectionner un cours.");
+                return;
+            }
+            try {
+                const response = await fetch('/api/todo-items/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify({
+                        course: currentCourseId,
+                        content: content
+                    }),
+                });
+                if (!response.ok) {
+                    throw new Error('Erreur lors de l\'ajout du todo');
+                }
+                const newTodo = await response.json();
+                currentTodos.push(newTodo);
+                renderTodos();
+            } catch (error) {
+                console.error('Erreur lors de l\'ajout du todo:', error);
+            }
+        }    
 
         // Gestion des cours
         document.querySelectorAll('.course-item').forEach(item => {

@@ -8,12 +8,9 @@ from monEspace.chat_view import ChatViewSet
 
 router = DefaultRouter()
 router.register(r'notes', NoteViewSet, basename='note')
-# router.register(r'notes', NoteViewSet)
 router.register(r'upload', AttachmentViewSet)
 router.register(r'chat', ChatViewSet, basename='chat')
-# Ajoutez cette ligne
 router.register(r'todo-items', TodoItemViewSet, basename='todo-item')
-#homework
 router.register(r'homeworks', HomeworkViewSet, basename='homework')
 
 urlpatterns = [
@@ -23,8 +20,8 @@ urlpatterns = [
     path("api/", include(router.urls)),
     path("", include("monFocusprof.urls")),
     path('api/chat/', ChatViewSet.as_view({'post': 'chat'}), name='chat'),
+    path('api/chat/generate-report/', ChatViewSet.as_view({'post': 'generate_report'}), name='generate-report'),
     path('api/homeworks/<int:homework_id>/analyze_and_feedback/', analyze_homework_and_create_feedback, name='analyze_homework'),
-
 ]
 
 if settings.DEBUG:

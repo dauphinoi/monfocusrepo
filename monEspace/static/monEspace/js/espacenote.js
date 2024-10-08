@@ -16,6 +16,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentAttachmentIndex = 0;
     let currentAttachments = [];
     let currentView = 'tasks';
+    let currentTodoId = null;
+
+    // finir des tacches
+     // Ajout de l'écouteur d'événements pour le bouton "Finir la tâche en cours"
+     const finishTaskBtn = document.getElementById('finishTaskBtn');
+        if (finishTaskBtn) {
+            finishTaskBtn.addEventListener('click', async function() {
+                if (confirm('Êtes-vous sûr de vouloir terminer la tâche en cours ?')) {
+                    await finalizeTaskSession();
+                }
+            });
+        }
 
     // Gestion de l'ajout de cours
     const addCourseBtn = document.getElementById('addCourseBtn');
@@ -173,6 +185,93 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     }
 
+    // Fonction pour finaliser la session de tâche
+    async function finalizeTaskSession() {
+    if (!currentSessionId || !currentTodoId) {
+        console.error('Aucune session de tâche active ou tâche non spécifiée');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/chat/generate_report/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                session_id: currentSessionId,
+                todo_id: currentTodoId
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Erreur lors de la génération du rapport');
+        }
+
+        const data = await response.json();
+        alert(data.message);
+        
+        if (data.task_deleted) {
+            // Supprimer la tâche de l'interface
+            removeTodoFromUI(data.task_id);
+        }
+        
+        // Réinitialiser l'état
+        currentSessionId = null;
+        currentTodoId = null;
+        const finishTaskBtn = document.getElementById('finishTaskBtn');
+        if (finishTaskBtn) {
+            finishTaskBtn.style.display = 'none';
+        }
+        toggleChat(); // Fermer le chat
+    } catch (error) {
+        console.error('Erreur lors de la finalisation de la session :', error);
+        alert('Une erreur est survenue lors de la génération du rapport.');
+    }
+}
+
+function removeTodoFromUI(todoId) {
+    // Supprimer la tâche de la liste affichée
+    const todoElement = document.querySelector(`[data-todo-id="${todoId}"]`);
+    if (todoElement) {
+        todoElement.remove();
+    }
+    
+    // Supprimer la tâche du cache local si vous en utilisez un
+    if (dataCache.todos[currentCourseId]) {
+        dataCache.todos[currentCourseId] = dataCache.todos[currentCourseId].filter(todo => todo.id !== todoId);
+    }
+    
+    // Mettre à jour l'affichage si nécessaire
+    updateTodoDisplay();
+}
+
+function updateTodoDisplay() {
+    // Fonction pour mettre à jour l'affichage des tâches restantes
+    const todoList = document.getElementById('todoList');
+    if (dataCache.todos[currentCourseId] && dataCache.todos[currentCourseId].length === 0) {
+        todoList.innerHTML = '<li>Toutes les tâches sont terminées !</li>';
+    }
+}
+
+// Fonction pour afficher le rapport
+function displayReport(reportHtml) {
+    const reportWindow = window.open('', '_blank');
+    reportWindow.document.write(reportHtml);
+    reportWindow.document.close();
+}
+
+// Fonction pour réinitialiser l'état de la session
+function resetTaskSession() {
+    currentSessionId = null;
+    const finishTaskBtn = document.getElementById('finishTaskBtn');
+    if (finishTaskBtn) {
+        finishTaskBtn.style.display = 'none';
+    }
+}
+
+    
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const mainContent = document.querySelector('.main-content');
@@ -1342,7 +1441,8 @@ function updateHomeworkStatus(homeworkId) {
         }
     }
 
-    async function fetchTodos(courseId) {
+    // Fonction pour charger les tâches d'un cours spécifique
+async function fetchTodos(courseId) {
     if (!dataCache.todos[courseId]) {
         try {
             const response = await fetch(`/api/todo-items/?course_id=${courseId}`);
@@ -1359,7 +1459,8 @@ function updateHomeworkStatus(homeworkId) {
     return dataCache.todos[courseId];
 }
 
-    function renderTodos(courseId) {
+    // Fonction pour rendre les tâches dans l'interface
+function renderTodos(courseId) {
     const todoList = document.getElementById('todoList');
     todoList.innerHTML = '';
     if (!dataCache.todos[courseId] || !Array.isArray(dataCache.todos[courseId])) {
@@ -1371,8 +1472,17 @@ function updateHomeworkStatus(homeworkId) {
         li.innerHTML = `
             <input type="checkbox" ${todo.completed ? 'checked' : ''} disabled>
             <span>${todo.content}</span>
+            <button class="start-task-btn" data-todo-id="${todo.id}">Commencer la tâche</button>
         `;
         todoList.appendChild(li);
+    });
+
+    // Ajouter des écouteurs d'événements pour les boutons "Commencer la tâche"
+    document.querySelectorAll('.start-task-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const todoId = parseInt(e.target.getAttribute('data-todo-id'), 10);
+            openChatWithTodo(todoId);
+        });
     });
 }
 
@@ -1480,24 +1590,62 @@ async function checkPendingTodos() {
         });
     }
 
-    function openChatWithTodos(todos) {
-        const todoList = todos.map(todo => `- ${todo.content}`).join('\n');
-        const initialMessage = `
-    Voici les tâches que nous allons accomplir ensemble :
-    ${todoList}
-    
-    Instructions pour l'IA :
-    1. Guide l'élève à travers chaque tâche une par une.
-    2. Pose des questions pour vérifier la compréhension de l'élève.
-    3. Fournis des explications si nécessaire, mais encourage l'élève à trouver les réponses par lui-même.
-    4. À la fin de chaque tâche, demande à l'élève s'il a compris et terminé la tâche.
-    
-    Commençons : Par quelle tâche voulez-vous commencer ?
-        `;
-        
-        toggleChat();
-        handleChatSubmit(initialMessage);
-    }
+    // Fonction pour ouvrir le chat avec les tâches sélectionnées
+    async function openChatWithTodo(todoId) {
+        const todo = dataCache.todos[currentCourseId].find(t => t.id === todoId);
+        currentTodoId = todoId;
+        if (!todo) {
+            console.error('Tâche non trouvée');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/chat/start_session/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({ 
+                    is_task_session: true,
+                    task_id: todoId
+                }),
+            });
+            
+            if (!response.ok) {
+                throw new Error('Erreur lors du démarrage de la session');
+            }
+            
+            const data = await response.json();
+            currentSessionId = data.session_id;
+
+            const initialMessage = `
+            Nous allons travailler sur la tâche suivante :
+            ${todo.content}
+
+            Instructions pour l'IA :
+            1. Guide l'élève à travers cette tâche.
+            2. Pose des questions pour vérifier la compréhension de l'élève.
+            3. Fournis des explications si nécessaire, mais encourage l'élève à trouver les réponses par lui-même.
+            4. À la fin de la tâche, demande à l'élève s'il a compris et terminé la tâche.
+
+            Commençons : Comment puis-je t'aider avec cette tâche ?
+                    `;
+            
+            toggleTodo();
+            toggleChat();
+            handleChatSubmit(initialMessage);
+
+            // Rendre le bouton "Finir la tâche" visible
+            const finishTaskBtn = document.getElementById('finishTaskBtn');
+            if (finishTaskBtn) {
+                finishTaskBtn.style.display = 'inline-block';
+            }
+        } catch (error) {
+            console.error('Erreur lors de l ouverture du chat:', error);
+            alert('Une erreur est survenue lors de l ouverture du chat pour cette tâche.');
+        }
+}
 
     async function endChatSession() {
         if (currentSessionId) {
