@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     initSidebar();
     toggleView('courses');
-    checkPendingTodos();
+    // checkPendingTodos();
     showStaticSVG();
 
     function initTinyMCE() {
@@ -97,6 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Masquer les sections de notes et le bouton de création au chargement initial
     document.getElementById('newNoteBtn').style.display = 'none';
     document.getElementById('allNotesSection').style.display = 'none';
+    document.getElementById('finishTaskBtn').style.display = 'none';
+    
 
    // Gestion des clics en dehors des overlays
    document.addEventListener('mousedown', function(event) {
@@ -1485,110 +1487,6 @@ function renderTodos(courseId) {
         });
     });
 }
-
-async function checkPendingTodos() {
-    if (todoPromptShown || !currentCourseId) return;
-
-    // Si les todos pour le cours actuel ne sont pas encore chargés, chargez-les d'abord
-    if (!dataCache.todos[currentCourseId]) {
-        await fetchTodos(currentCourseId);
-    }
-
-    // Vérifiez à nouveau si les todos sont disponibles après le chargement
-    if (dataCache.todos[currentCourseId] && Array.isArray(dataCache.todos[currentCourseId])) {
-        const pendingTodos = dataCache.todos[currentCourseId].filter(todo => !todo.completed);
-        if (pendingTodos.length > 0) {
-            showTodoPrompt(pendingTodos);
-            todoPromptShown = true;
-        }
-    }
-}
-
-    function showTodoPrompt(todos) {
-        const overlay = document.createElement('div');
-        overlay.className = 'todo-prompt-overlay';
-        overlay.innerHTML = `
-            <div class="todo-prompt-content">
-                <h2>Bonjour ${userFirstName} 👋</h2>
-                <p>Vous avez ${todos.length} tâche${todos.length > 1 ? 's' : ''} en attente.</p>
-                <p>Souhaitez-vous les accomplir maintenant avec l'aide de l'IA ?</p>
-                <div class="todo-prompt-buttons">
-                    <button id="acceptTodoPrompt" class="todo-prompt-button accept">Oui, allons-y !</button>
-                    <button id="declineTodoPrompt" class="todo-prompt-button decline">Plus tard</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-
-        const style = document.createElement('style');
-        style.textContent = `
-            .todo-prompt-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-            }
-            .todo-prompt-content {
-                background-color: #ffffff;
-                padding: 2rem;
-                border-radius: 15px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                text-align: center;
-                max-width: 400px;
-                width: 90%;
-            }
-            .todo-prompt-content h2 {
-                color: #4a4a4a;
-                margin-bottom: 1rem;
-            }
-            .todo-prompt-content p {
-                color: #6a6a6a;
-                margin-bottom: 1.5rem;
-            }
-            .todo-prompt-buttons {
-                display: flex;
-                justify-content: space-around;
-            }
-            .todo-prompt-button {
-                padding: 0.75rem 1.5rem;
-                border: none;
-                border-radius: 5px;
-                font-size: 1rem;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-            .todo-prompt-button.accept {
-                background-color: #4CAF50;
-                color: white;
-            }
-            .todo-prompt-button.decline {
-                background-color: #f44336;
-                color: white;
-            }
-            .todo-prompt-button:hover {
-                opacity: 0.9;
-                transform: scale(1.05);
-            }
-        `;
-        document.head.appendChild(style);
-
-        document.getElementById('acceptTodoPrompt').addEventListener('click', () => {
-            document.body.removeChild(overlay);
-            document.head.removeChild(style);
-            openChatWithTodos(todos);
-        });
-
-        document.getElementById('declineTodoPrompt').addEventListener('click', () => {
-            document.body.removeChild(overlay);
-            document.head.removeChild(style);
-        });
-    }
 
     // Fonction pour ouvrir le chat avec les tâches sélectionnées
     async function openChatWithTodo(todoId) {

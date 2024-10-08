@@ -310,8 +310,8 @@ class NoteViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         
         try:
-            # Supprimer les fichiers du bucket S3
-            self.delete_s3_files(instance)
+            # # Supprimer les fichiers du bucket S3
+            # self.delete_s3_files(instance)
             
             # Supprimer l'embedding de Pinecone
             pc = Pinecone(api_key=settings.PINECONE_API_KEY)
@@ -327,6 +327,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete_s3_files(self, note):
+        return None
         s3 = boto3.client('s3',
                           aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                           aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
